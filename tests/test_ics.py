@@ -53,7 +53,6 @@ def test_summaries(config):
 
 
 def test_favored_by_tide_names_the_tide(config):
-    config["preferences"]["tide"]["low"] = "fav"
     [window] = windows_for(config, 28, wind_speed_mph=8, wind_direction_deg=180)
     assert summary(window, config) == "★ Surf: Pleasure Point · chest-high · low tide"
 
@@ -64,7 +63,7 @@ def test_description_has_one_line_per_factor_and_updated(config):
     assert str(event["description"]).split("\n") == [
         "Size: Chest-high, 3 ft faces (1.5 m at 12 s from W) ★",
         "Wind: Glassy, 3 mph offshore ★",
-        "Tide: Low, rising (1.0 → 1.5 ft)",
+        "Tide: Low, rising (1.0 → 1.5 ft) ★",
         "Rain: No rain in the prior 72 hours",
         "Daylight: Sunrise 7:25am, sunset 6:12pm",
         "Updated Tue Oct 27, 3:05pm",

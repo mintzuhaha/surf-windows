@@ -67,8 +67,9 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
    - **Face height (ft)** = `swell_wave_height_m × 3.281 × period_factor × spot.size_factor`, where `period_factor = min(1.4, 1 + 0.05 × max(0, period_s − 10))`. Fall back to `wave_height` / `wave_period` when swell values are null. These constants are starting guesses: keep them in one place and note any change in DECISIONS.md.
    - **Size bucket** from `size_buckets` in config.
    - **Wind class.** Offshore = wind blowing FROM within ±60° of `(spot.faces_deg + 180) mod 360`. `glassy` = speed < 5 mph or offshore. `light` = not glassy and speed <= 12 mph. `windy` = everything else.
-   - **Tide level** relative to that calendar day's predicted range: bottom third = `low`, middle = `mid`, top third = `high`. **Direction** from the next hour's predicted height (`rising` / `falling`).
+   - **Tide level:** `high` when the tide reaches the break's `spot.high_tide_ft` (Pleasure Point: 4.2 ft) at the start or end of the hour. Below that, the bottom third of that calendar day's predicted range = `low`, the rest = `mid`. **Direction** from the next hour's predicted height (`rising` / `falling`).
 3. **Apply preferences.** Each factor's value maps to `skip | ok | fav` in config.
+   - The tide state is upgraded to `fav` when the tide stays below the break's `spot.ideal_tide_ft` (Pleasure Point: 3.7 ft) at the start and end of the hour, unless its level is `skip`.
    - The hour **passes** when no factor is `skip` and its tide direction is enabled.
    - The hour is **favored** when size is `fav` AND (wind is `fav` OR tide level is `fav`).
 4. Every hour keeps an explanation: each factor's value and state, plus the failure reason when it fails.

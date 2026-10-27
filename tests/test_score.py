@@ -56,12 +56,27 @@ def test_wind_class(speed, aspect, expected):
     assert wind_class(speed, aspect) == expected
 
 
-def test_tide_level_thirds_of_day_range():
-    assert tide_level(1.9, 0.0, 6.0) == "low"
-    assert tide_level(2.0, 0.0, 6.0) == "mid"
-    assert tide_level(4.0, 0.0, 6.0) == "mid"
-    assert tide_level(4.1, 0.0, 6.0) == "high"
-    assert tide_level(1.0, 1.0, 1.0) == "mid"
+def test_tide_is_high_when_the_hour_reaches_the_break_limit():
+    assert tide_level(4.2, 4.0, 0.0, 6.0, high_tide_ft=4.2) == "high"
+    assert tide_level(4.0, 4.3, 0.0, 6.0, high_tide_ft=4.2) == "high"  # rises past it within the hour
+    assert tide_level(4.1, 4.19, 0.0, 6.0, high_tide_ft=4.2) == "mid"
+    # Sun Nov 1: top third of that day's range (-0.2 to 5.1 ft), but under the limit.
+    assert tide_level(3.6, 3.4, -0.2, 5.1, high_tide_ft=4.2) == "mid"
+
+
+def test_tide_level_low_is_bottom_third_of_day_range():
+    assert tide_level(1.9, 1.8, 0.0, 6.0, high_tide_ft=4.2) == "low"
+    assert tide_level(2.0, 2.1, 0.0, 6.0, high_tide_ft=4.2) == "mid"
+    assert tide_level(1.0, 1.0, 1.0, 1.0, high_tide_ft=4.2) == "mid"
+
+
+def test_tide_below_ideal_for_the_whole_hour_is_favored(config):
+    def tide_state(start, end):
+        return score_hour(make_hour(tide_ft=start, tide_next_ft=end), config).states["tide"]
+    assert tide_state(3.5, 3.6) == "fav"
+    assert tide_state(3.5, 3.8) == "ok"  # rises past 3.7 within the hour
+    assert tide_state(4.0, 4.1) == "ok"
+    assert tide_state(4.0, 4.3) == "skip"
 
 
 def test_tide_direction_from_next_hour():
@@ -111,10 +126,9 @@ def test_ok_size_passes_without_favor(config):
     assert sh.size == "waist" and sh.passes and not sh.favored
 
 
-def test_favored_by_tide_when_wind_is_only_ok(config):
-    config["preferences"]["tide"]["low"] = "fav"
-    sh = score_hour(make_hour(wind_speed_mph=8, wind_direction_deg=180), config)
-    assert sh.wind == "light" and sh.favored
+def test_ideal_tide_favors_an_hour_without_glassy_wind(config):
+    sh = score_hour(make_hour(wind_speed_mph=8, wind_direction_deg=180), config)  # tide 1.0 -> 1.5 ft
+    assert sh.wind == "light" and sh.states["tide"] == "fav" and sh.favored
 
 
 def test_skip_factor_and_disabled_direction_fail(config):

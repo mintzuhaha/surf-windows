@@ -83,7 +83,6 @@ def find_windows(scored: list[ScoredHour], config: dict[str, Any], today: date) 
 
 def describe_window(w: Window, config: dict[str, Any]) -> list[tuple[str, str, str]]:
     """(factor, text, state) for size, wind, tide, rain and daylight. State is fav or ok."""
-    prefs = config["preferences"]
     first, last = w.hours[0].hour, w.hours[-1].hour
     peak = max(w.hours, key=lambda h: h.face_ft or 0.0)
     faces = [h.face_ft for h in w.hours if h.face_ft is not None]
@@ -91,12 +90,13 @@ def describe_window(w: Window, config: dict[str, Any]) -> list[tuple[str, str, s
     aspect = _most_common([h.wind_aspect for h in w.hours])
     levels = " to ".join(_unique([h.tide_level for h in w.hours]))
     directions = " then ".join(_unique([h.tide_direction for h in w.hours]))
+    def state(factor: str) -> str:
+        return _most_common([h.states[factor] for h in w.hours])
+
     return [
-        ("size", f"{size_label(w.size).capitalize()}, {_span(faces)} ft faces ({swell_detail(peak.hour)})",
-         prefs["size"][w.size]),
-        ("wind", f"{w.wind.capitalize()}, {_span(speeds)} mph {aspect}", prefs["wind"][w.wind]),
-        ("tide", f"{levels.capitalize()}, {directions} ({first.tide_ft:.1f} → {last.tide_next_ft:.1f} ft)",
-         prefs["tide"][w.tide_level]),
+        ("size", f"{size_label(w.size).capitalize()}, {_span(faces)} ft faces ({swell_detail(peak.hour)})", state("size")),
+        ("wind", f"{w.wind.capitalize()}, {_span(speeds)} mph {aspect}", state("wind")),
+        ("tide", f"{levels.capitalize()}, {directions} ({first.tide_ft:.1f} → {last.tide_next_ft:.1f} ft)", state("tide")),
         ("rain", rain_text(max(h.hour.rain_prior_in for h in w.hours), config), "ok"),
         ("daylight", daylight_text(first), "ok"),
     ]

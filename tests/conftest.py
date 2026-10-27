@@ -21,6 +21,7 @@ CONFIG: dict[str, Any] = {
     "spot": {
         "id": "pleasure-point", "name": "Pleasure Point", "lat": 36.95469, "lon": -121.97253,
         "timezone": "America/Los_Angeles", "noaa_station": "9413450", "faces_deg": 180, "size_factor": 0.6,
+        "high_tide_ft": 4.2, "ideal_tide_ft": 3.7,
     },
     "size_buckets": {
         "knee": [1.0, 2.0], "waist": [2.0, 3.0], "chest": [3.0, 4.5],

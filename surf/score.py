@@ -115,15 +115,14 @@ def wind_class(speed_mph: float, aspect: str) -> str:
     return "windy"
 
 
-def tide_level(tide_ft: float, day_low_ft: float, day_high_ft: float) -> str:
-    span = day_high_ft - day_low_ft
-    if span <= 0:
-        return "mid"
-    position = (tide_ft - day_low_ft) / span
-    if position < 1 / 3:
-        return "low"
-    if position > 2 / 3:
+def tide_level(tide_ft: float, next_tide_ft: float, day_low_ft: float, day_high_ft: float, high_tide_ft: float) -> str:
+    """`high` if the tide reaches the break's limit during the hour; otherwise `low` in the
+    bottom third of the day's range, else `mid`."""
+    if max(tide_ft, next_tide_ft) >= high_tide_ft:
         return "high"
+    span = day_high_ft - day_low_ft
+    if span > 0 and (tide_ft - day_low_ft) / span < 1 / 3:
+        return "low"
     return "mid"
 
 
@@ -146,7 +145,7 @@ def score_hour(hour: Hour, config: dict[str, Any]) -> ScoredHour:
     size = size_bucket(face, config["size_buckets"])
     aspect = wind_aspect(hour.wind_direction_deg, spot["faces_deg"])
     wind = wind_class(hour.wind_speed_mph, aspect)
-    level = tide_level(hour.tide_ft, hour.tide_day_low_ft, hour.tide_day_high_ft)
+    level = tide_level(hour.tide_ft, hour.tide_next_ft, hour.tide_day_low_ft, hour.tide_day_high_ft, spot["high_tide_ft"])
     direction = tide_direction(hour.tide_ft, hour.tide_next_ft)
     states = {
         "daylight": "ok" if is_daylight(hour) else "skip",
@@ -154,11 +153,19 @@ def score_hour(hour: Hour, config: dict[str, Any]) -> ScoredHour:
         "rain": "skip" if hour.rain_prior_in >= prefs["rain"]["threshold_in"] else "ok",
         "size": prefs["size"].get(size, "skip"),
         "wind": prefs["wind"].get(wind, "skip"),
-        "tide": prefs["tide"].get(level, "skip"),
+        "tide": _tide_state(hour, level, prefs["tide"], spot["ideal_tide_ft"]),
         "tide_direction": "ok" if prefs["tide_direction"].get(direction, False) else "skip",
     }
     failures = tuple(REASONS.get(c, c) for c in CHECKS if states[c] == "skip")
     return ScoredHour(hour, face, size, wind, aspect, level, direction, states, failures)
+
+
+def _tide_state(hour: Hour, level: str, tide_prefs: dict[str, str], ideal_tide_ft: float) -> str:
+    """The level's preference, upgraded to fav while the tide stays below the break's ideal."""
+    state = tide_prefs.get(level, "skip")
+    if state != "skip" and max(hour.tide_ft, hour.tide_next_ft) < ideal_tide_ft:
+        return "fav"
+    return state
 
 
 def score_hours(hours: list[Hour], config: dict[str, Any]) -> list[ScoredHour]:
