@@ -36,7 +36,7 @@ def render_page(forecast: Forecast, feed_url: str) -> str:
         '</section>',
         _window_list(f.windows, f.config),
         _near_misses(f),
-        _calendar_card(feed_url),
+        _calendar_card(feed_url, len(f.windows)),
         _how_it_works(f.config),
         '</main>',
         _footer(),
@@ -114,7 +114,7 @@ def _window_list(windows: list[Window], config: dict[str, Any]) -> str:
     groups: dict[date, list[Window]] = {}
     for w in windows:
         groups.setdefault(w.start.date(), []).append(w)
-    out = []
+    out = [_picker(len(windows))]
     for d, ws in groups.items():
         out.append(f'<section class="day-group"><h2 class="day-title">{_day_title(d, ws[0].days_out)}</h2>')
         out.extend(_window_card(w, config) for w in ws)
@@ -134,7 +134,16 @@ def _window_card(w: Window, config: dict[str, Any]) -> str:
     rows.append(f'<div class="row"><dt>Confidence</dt><dd>{_confidence(w)}</dd></div>')
     cls = ("fav" if w.favored else "ok") + (" tent" if w.tentative else "")
     return (f'<article class="card window {cls}" id="{w.id}"><div class="win-head">{badge}'
-            f'<h3>{_time_range(w.start, w.end)}</h3></div><dl class="factors">{"".join(rows)}</dl></article>')
+            f'<h3>{_time_range(w.start, w.end)}</h3>'
+            f'<label class="pick"><input type="checkbox" data-window="{w.id}" checked> Add</label></div>'
+            f'<dl class="factors">{"".join(rows)}</dl></article>')
+
+
+def _picker(count: int) -> str:
+    """Select all / Deselect all over the window checkboxes; JS keeps the count and links in sync."""
+    return (f'<div class="picker"><span class="pick-count">{count} of {count} windows selected</span>'
+            '<button type="button" class="link" data-select="all">Select all</button>'
+            '<button type="button" class="link" data-select="none">Deselect all</button></div>')
 
 
 def _near_misses(f: Forecast) -> str:
@@ -148,22 +157,28 @@ def _near_misses(f: Forecast) -> str:
     return f'<section class="card empty"><h2>{title}</h2><ul class="misses mono">{items}</ul></section>'
 
 
-def _calendar_card(feed_url: str) -> str:
+def _calendar_card(feed_url: str, window_count: int) -> str:
+    """The links start as the full feed; the page's JS adds ?skip= for unchecked windows."""
     webcal = "webcal://" + feed_url.split("://", 1)[-1]
     google = "https://calendar.google.com/calendar/render?cid=" + quote(webcal, safe="")
+    picks = ""
+    if window_count:
+        picks = (f'<p class="pick-count">{window_count} of {window_count} windows selected</p>'
+                 '<p>Uncheck any window above to leave it off. New windows are still added as they show up.</p>')
     return (
         '<section class="card cal"><h2>Put these windows on your calendar</h2>'
         '<p>Subscribe once and windows appear, change and drop off as the forecast moves. '
         'Calendar apps re-check the feed every few hours.</p>'
-        '<div class="buttons">'
-        f'<a class="btn primary" href="{escape(google)}" target="_blank" rel="noopener">'
+        f'{picks}<div class="buttons">'
+        f'<a class="btn primary" id="google-add" href="{escape(google)}" target="_blank" rel="noopener">'
         '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" '
         'rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" '
         'stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Add to Google Calendar</a>'
         f'<button class="btn" type="button" data-copy="{escape(feed_url)}">Copy feed link</button></div>'
-        f'<code class="feed mono" id="feed-url">{escape(feed_url)}</code>'
+        f'<code class="feed mono" id="feed-url" data-base="{escape(feed_url)}">{escape(feed_url)}</code>'
         '<p class="hint">On a phone? If the button doesn\'t add it, open this page on a computer once. '
-        'The calendar then syncs to your phone.</p></section>'
+        'The calendar then syncs to your phone. Already subscribed? Changing your picks makes a new link, '
+        'so remove the old Surf windows calendar in Google first.</p></section>'
     )
 
 
@@ -344,6 +359,17 @@ main { max-width: 960px; margin: 0 auto; padding: 16px; display: grid; grid-temp
 footer { max-width: 960px; margin: 0 auto; padding: 4px 16px 32px; font-size: 12px; color: var(--muted); }
 footer a { color: var(--muted); }
 
+.picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; }
+.pick-count { color: var(--muted); font-size: 13px; }
+.cal .pick-count { margin: 0 0 4px; font-weight: 600; color: var(--text); }
+button.link { background: none; border: 0; padding: 0; font: 600 13px "IBM Plex Sans", sans-serif; color: var(--fav);
+  text-decoration: underline; cursor: pointer; }
+.pick { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+  color: var(--fav); cursor: pointer; }
+.pick input { width: 18px; height: 18px; margin: 0; accent-color: var(--fav); cursor: pointer; }
+.window.off, .cell.win.off { opacity: .45; }
+.btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+
 @media (max-width: 560px) {
   .card { padding: 16px; }
   .row { grid-template-columns: 76px 1fr; }
@@ -359,6 +385,34 @@ JS = """
     el.textContent = 'Updated ' + (m < 1 ? 'just now' : m === 1 ? '1 minute ago'
       : m < 120 ? m + ' minutes ago' : Math.round(m / 60) + ' hours ago');
   }
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[data-window]'));
+  var feed = document.getElementById('feed-url');
+  function sync() {
+    var off = boxes.filter(function (b) { return !b.checked; })
+      .map(function (b) { return b.dataset.window; }).sort();
+    var url = feed.dataset.base + (off.length ? '?skip=' + off.join(',') : '');
+    feed.textContent = url;
+    document.querySelectorAll('[data-copy]').forEach(function (b) { b.dataset.copy = url; });
+    var google = document.getElementById('google-add');
+    google.href = 'https://calendar.google.com/calendar/render?cid=' + encodeURIComponent('webcal://' + url.split('://')[1]);
+    google.setAttribute('aria-disabled', off.length === boxes.length ? 'true' : 'false');
+    document.querySelectorAll('.pick-count').forEach(function (el) {
+      el.textContent = (boxes.length - off.length) + ' of ' + boxes.length + ' windows selected';
+    });
+    boxes.forEach(function (b) {
+      document.getElementById(b.dataset.window).classList.toggle('off', !b.checked);
+      var cell = document.querySelector('.cell.win[href="#' + b.dataset.window + '"]');
+      if (cell) cell.classList.toggle('off', !b.checked);
+    });
+  }
+  boxes.forEach(function (b) { b.addEventListener('change', sync); });
+  document.querySelectorAll('[data-select]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      boxes.forEach(function (b) { b.checked = btn.dataset.select === 'all'; });
+      sync();
+    });
+  });
+  if (boxes.length) sync();
   document.querySelectorAll('[data-copy]').forEach(function (b) {
     b.addEventListener('click', function () {
       var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy feed link'; }, 1600); };

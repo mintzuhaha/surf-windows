@@ -13,7 +13,10 @@ from surf.windows import Window, describe_window
 REFRESH = timedelta(hours=3)
 
 
-def build_feed(windows: list[Window], config: dict[str, Any], now: datetime) -> str:
+def build_feed(
+    windows: list[Window], config: dict[str, Any], now: datetime, skip: frozenset[str] = frozenset()
+) -> str:
+    """skip holds window ids the subscriber unchecked on the page."""
     cal = Calendar()
     cal.add("prodid", "-//Surf Windows//surf-windows//EN")
     cal.add("version", "2.0")
@@ -26,6 +29,8 @@ def build_feed(windows: list[Window], config: dict[str, Any], now: datetime) -> 
 
     stamp = now.astimezone(timezone.utc)
     for w in windows:
+        if w.id in skip:
+            continue
         event = Event()
         event.add("uid", f"{w.id}@surf-windows")
         event.add("dtstamp", stamp)

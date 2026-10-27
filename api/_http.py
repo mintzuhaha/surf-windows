@@ -8,6 +8,7 @@ import traceback
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import NamedTuple
+from urllib.parse import parse_qs
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -34,10 +35,12 @@ def page_response(headers) -> Response:
         return Response(503, "text/plain; charset=utf-8", UNAVAILABLE, "no-store")
 
 
-def feed_response() -> Response:
+def feed_response(query: str = "") -> Response:
+    """query may carry skip=<window id>,<window id> from the page's checkboxes."""
+    skip = frozenset(i for i in parse_qs(query).get("skip", [""])[0].split(",") if i)
     try:
         forecast = run()
-        body = build_feed(forecast.windows, forecast.config, forecast.now)
+        body = build_feed(forecast.windows, forecast.config, forecast.now, skip)
         return Response(200, "text/calendar; charset=utf-8", body, CACHE_CONTROL)
     except Exception:
         traceback.print_exc()

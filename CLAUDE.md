@@ -88,6 +88,7 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
 - `SUMMARY`: `★ Surf: Pleasure Point · chest-high · glassy` for favored, `Surf: Pleasure Point · waist-high` otherwise. Prefix tentative ones `Surf (tentative): …`.
 - `DESCRIPTION`: one line per factor (size, wind, tide, rain, daylight) and `Updated <local time>`.
 - Calendar headers: `X-WR-CALNAME:Surf windows`, `REFRESH-INTERVAL;VALUE=DURATION:PT3H`, `X-PUBLISHED-TTL:PT3H`.
+- `?skip=<window id>,<window id>` leaves those windows out. Everything else, including windows that appear later, stays in.
 
 ## Page (`/`)
 
@@ -96,6 +97,7 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
 - Windows grouped by day: time range, size, wind, tide, plus rain and daylight checks. Favored windows look stronger; tentative ones are labeled.
 - Empty state: "Flat week. Here's what's closest:" followed by the near misses with reasons.
 - Buttons: "Add to Google Calendar" using Google's add-by-URL link (`https://calendar.google.com/calendar/render?cid=<url-encoded webcal:// feed URL>`; verify it works on desktop and phone) and "Copy feed link".
+- Each window card has an "Add" checkbox, all checked by default, plus "Select all" / "Deselect all". The Google button, copy button and feed URL leave unchecked windows out via `?skip=`.
 - "How it works" (3 bullets), a link to the GitHub repo, and the data attribution.
 - Works at phone width.
 - Visual reference: mockup screenshots in `docs/` if present. Colors: favored `#12466F`, will-surf `#9EC5E8`, text `#10283A`, background `#F4F5F2`. Fonts: IBM Plex Sans and IBM Plex Mono (Google Fonts).

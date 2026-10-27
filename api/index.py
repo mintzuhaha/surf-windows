@@ -23,9 +23,9 @@ class handler(BaseHTTPRequestHandler):
         send(self, self._route(), include_body=False)
 
     def _route(self) -> Response:
-        path = urlsplit(self.path).path
-        if path in PAGE_PATHS:
+        url = urlsplit(self.path)
+        if url.path in PAGE_PATHS:
             return page_response(self.headers)
-        if path in FEED_PATHS:
-            return feed_response()
+        if url.path in FEED_PATHS:
+            return feed_response(url.query)
         return not_found()

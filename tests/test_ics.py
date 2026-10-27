@@ -69,3 +69,10 @@ def test_description_has_one_line_per_factor_and_updated(config):
         "Updated Tue Oct 27, 3:05pm",
     ]
     assert str(event["status"]) == "CONFIRMED"
+
+
+def test_skipped_windows_are_left_out(config):
+    windows = windows_for(config, 28) + windows_for(config, 29)
+    text = build_feed(windows, config, NOW, skip=frozenset({"pleasure-point-20261028-07"}))
+    events = Calendar.from_ical(text).walk("VEVENT")
+    assert [str(e["uid"]) for e in events] == ["pleasure-point-20261029-07@surf-windows"]
