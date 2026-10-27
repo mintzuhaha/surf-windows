@@ -15,3 +15,5 @@ One or two lines per choice, with the why. Newest at the bottom.
 - **2026-10-27 · Near misses: best hour per (day, reason).** Ranked by how many of size/wind/tide are favored, then soonest; keeping one per day and reason stops one windy morning from filling all five slots. Shown in time order.
 - **2026-10-27 · Events are TRANSPARENT, tentative ones STATUS:TENTATIVE.** A surf window is a suggestion, so it shouldn't mark you busy to people booking meetings.
 - **2026-10-27 · Window size/wind/tide labels are the most common value across its hours.** Face and wind ranges show the spread; the swell detail comes from the window's biggest hour.
+- **2026-10-27 · "Updated N minutes ago" is computed in the browser.** The CDN can serve a cached page for up to 90 minutes (s-maxage + stale-while-revalidate), so server-rendered relative time would be wrong; the page embeds the fetch timestamp and a few lines of JS format it.
+- **2026-10-27 · Week grid scrolls inside its card on phones.** Seven day columns can't fit 390px legibly; the window cards below carry the same information and stack normally.
