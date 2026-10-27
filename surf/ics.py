@@ -48,7 +48,7 @@ def summary(w: Window, config: dict[str, Any]) -> str:
     if not w.favored:
         return text
     wind_is_fav = config["preferences"]["wind"].get(w.wind) == "fav"
-    return f"★ {text} · {w.wind if wind_is_fav else w.tide_level + ' tide'}"
+    return f"★ {text} · {w.wind if wind_is_fav else 'ideal tide'}"
 
 
 def description(w: Window, config: dict[str, Any], now: datetime) -> str:

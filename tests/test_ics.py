@@ -54,7 +54,7 @@ def test_summaries(config):
 
 def test_favored_by_tide_names_the_tide(config):
     [window] = windows_for(config, 28, wind_speed_mph=8, wind_direction_deg=180)
-    assert summary(window, config) == "★ Surf: Pleasure Point · chest-high · low tide"
+    assert summary(window, config) == "★ Surf: Pleasure Point · chest-high · ideal tide"
 
 
 def test_description_has_one_line_per_factor_and_updated(config):
