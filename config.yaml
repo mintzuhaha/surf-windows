@@ -8,7 +8,7 @@ spot:
   lat: 36.95469
   lon: -121.97253
   timezone: America/Los_Angeles
-  noaa_station: "9413745"   # Santa Cruz, Monterey Bay
+  noaa_station: "9413450"   # Monterey. Santa Cruz (9413745) only has high/low predictions; see DECISIONS.md
   faces_deg: 180            # direction the break faces, toward the ocean. Starting guess: set your own.
   size_factor: 0.6          # sheltered spots break smaller than the open-ocean forecast. Starting guess: calibrate.
 

@@ -49,8 +49,8 @@ DECISIONS.md
   - `hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation`
   - `wind_speed_unit=mph&precipitation_unit=inch&timezone=America/Los_Angeles&forecast_days=7&past_days=3`
   - `past_days=3` is required for the 72-hour rain rule.
-- **Tides:** NOAA CO-OPS station `9413745` (Santa Cruz, Monterey Bay)
-  - `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&station=9413745&datum=MLLW&interval=h&units=english&time_zone=lst_ldt&format=json&begin_date=YYYYMMDD&end_date=YYYYMMDD&application=surf-windows`
+- **Tides:** NOAA CO-OPS station `9413450` (Monterey). The Santa Cruz station `9413745` is a subordinate station with high/low predictions only, so `interval=h` fails there (see DECISIONS.md).
+  - `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&station=9413450&datum=MLLW&interval=h&units=english&time_zone=lst_ldt&format=json&begin_date=YYYYMMDD&end_date=YYYYMMDD&application=surf-windows`
   - Request today through today+7 (local dates), so the last forecast hour still has a "next hour" for rising/falling.
 - **Daylight:** compute dawn, sunrise and sunset locally with `astral` for the spot's lat/lon. No API.
 - **Attribution (required):** show "Weather data by Open-Meteo.com" and "Tide predictions: NOAA" on the page. Open-Meteo is free for non-commercial use.
