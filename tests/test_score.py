@@ -82,11 +82,13 @@ def test_hard_filters_report_in_order(config):
     assert sh.reason == "dark"
 
 
-def test_daylight_boundaries_are_inclusive(config):
+def test_daylight_boundaries_and_dawn_grace(config):
     at_dawn = make_hour(start=local(2026, 10, 28, 7))
     assert score_hour(at_dawn, config).passes
-    before_dawn = make_hour(start=local(2026, 10, 28, 7), dawn=local(2026, 10, 28, 7, 1))
-    assert score_hour(before_dawn, config).reason == "dark"
+    within_grace = make_hour(start=local(2026, 10, 28, 7), dawn=local(2026, 10, 28, 7, 15))
+    assert score_hour(within_grace, config).passes
+    before_grace = make_hour(start=local(2026, 10, 28, 7), dawn=local(2026, 10, 28, 7, 16))
+    assert score_hour(before_grace, config).reason == "dark"
     ends_at_sunset = make_hour(start=local(2026, 10, 28, 17), sunset=local(2026, 10, 28, 18))
     assert "dark" not in score_hour(ends_at_sunset, config).failures
     ends_after_sunset = make_hour(start=local(2026, 10, 28, 17), sunset=local(2026, 10, 28, 17, 59))

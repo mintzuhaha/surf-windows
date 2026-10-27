@@ -60,7 +60,7 @@ DECISIONS.md
 For each local hour in the next 7 days, starting from the current hour. Hours that already ended today are never scored and never become windows.
 
 1. **Hard filters**, in order. Record the first failure as the hour's reason.
-   - `dark`: the hour must start at or after civil dawn and end at or before sunset.
+   - `dark`: the hour must start no earlier than 15 minutes before civil dawn (`DAWN_GRACE` in score.py) and end at or before sunset.
    - `busy`: the hour must fall inside a free slot for that day (weekday vs weekend lists in config).
    - `rain`: if total precipitation in the prior `rain.skip_after_hours` hours is >= `rain.threshold_in`, the hour fails.
 2. **Classify** the hour:

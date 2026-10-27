@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from surf.normalize import Hour
@@ -18,6 +18,10 @@ PERIOD_FACTOR_MAX = 1.4
 OFFSHORE_HALF_ANGLE_DEG = 60.0
 GLASSY_BELOW_MPH = 5.0
 LIGHT_MAX_MPH = 12.0
+
+# An hour starting this soon before civil dawn still counts as daylight. In autumn
+# dawn lands a minute or two after 7:00, which would otherwise drop the 7am hour.
+DAWN_GRACE = timedelta(minutes=15)
 
 FLAT = "flat"  # face height below the smallest bucket
 UNKNOWN = "unknown"  # no wave data at all
@@ -128,7 +132,7 @@ def tide_direction(tide_ft: float, next_tide_ft: float) -> str:
 
 
 def is_daylight(hour: Hour) -> bool:
-    return hour.start >= hour.dawn and hour.end <= hour.sunset
+    return hour.start + DAWN_GRACE >= hour.dawn and hour.end <= hour.sunset
 
 
 def is_free(start: datetime, free_hours: dict[str, list[list[int]]]) -> bool:

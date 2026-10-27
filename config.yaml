@@ -10,7 +10,7 @@ spot:
   timezone: America/Los_Angeles
   noaa_station: "9413450"   # Monterey. Santa Cruz (9413745) only has high/low predictions; see DECISIONS.md
   faces_deg: 180            # direction the break faces, toward the ocean. Starting guess: set your own.
-  size_factor: 0.6          # sheltered spots break smaller than the open-ocean forecast. Starting guess: calibrate.
+  size_factor: 1.1          # calibrated 2026-10-27 against Surfline for Oct 28 and 30; see DECISIONS.md
 
 size_buckets:               # face height in feet, [min, max)
   knee:     [1.0, 2.0]
@@ -44,6 +44,6 @@ preferences:
     threshold_in: 0.1
   min_window_hours: 2
   tentative_after_days: 3
-  free_hours:               # 24-hour clock, [start, end)
-    weekdays: [[6, 9], [16, 19]]
-    weekends: [[6, 15]]
+  free_hours:               # 24-hour clock, [start, end). All day by default; narrow these to your schedule.
+    weekdays: [[0, 24]]
+    weekends: [[0, 24]]
