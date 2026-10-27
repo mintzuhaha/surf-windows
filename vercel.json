@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/feed.ics", "destination": "/api/feed" },
+    { "source": "/", "destination": "/api/index" }
+  ],
+  "functions": {
+    "api/*.py": { "includeFiles": "{config.yaml,surf/**}" }
+  }
+}
