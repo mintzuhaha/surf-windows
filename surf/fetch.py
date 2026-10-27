@@ -24,7 +24,9 @@ def fetch_marine(spot: dict[str, Any]) -> dict[str, Any]:
         "latitude": spot["lat"],
         "longitude": spot["lon"],
         "hourly": "wave_height,wave_period,wave_direction,"
-        "swell_wave_height,swell_wave_period,swell_wave_direction",
+        "swell_wave_height,swell_wave_period,swell_wave_direction,"
+        "secondary_swell_wave_height,secondary_swell_wave_period,secondary_swell_wave_direction,"
+        "wind_wave_height,wind_wave_period,wind_wave_direction",
         "timezone": spot["timezone"],
         "forecast_days": FORECAST_DAYS,
     }

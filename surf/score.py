@@ -2,17 +2,27 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
 from surf.normalize import Hour
 
-# Face-height model. Starting guesses: log any change in DECISIONS.md.
+# Surf-height model, in Surfline's ft scale. Fitted 2026-10-27 to 59 Surfline forecasts for
+# Pleasure Point (Oct 28-Nov 4); spot.size_factor is the overall gain. Log refits in DECISIONS.md.
 FT_PER_M = 3.281
-PERIOD_BASE_S = 10.0
-PERIOD_GAIN_PER_S = 0.05
-PERIOD_FACTOR_MAX = 1.4
+PERIOD_REF_S = 10.0
+PERIOD_POWER = 0.8  # longer-period swell breaks bigger
+WESTERLY_FROM_DEG = 245.0  # W/NW swells wrap into the point and lose size
+WESTERLY_WEIGHT = 0.8
+
+# Surfline-style ranges: (from ft, label). Size buckets in config use the same scale.
+SURF_RANGES = (
+    (0.0, "0–1 ft"), (1.0, "1–2 ft"), (1.6, "1–2 ft+"), (2.0, "2–3 ft"), (2.6, "2–3 ft+"), (3.0, "3–4 ft"),
+    (3.6, "3–4 ft+"), (4.0, "4–5 ft"), (4.75, "4–6 ft"), (5.15, "4–6 ft+"), (5.5, "5–7 ft"), (6.5, "6–8 ft"),
+    (8.0, "8–10 ft"), (10.0, "10–12 ft"), (12.0, "12–15 ft"), (15.0, "15–20 ft"),
+)
 
 # Wind classes.
 OFFSHORE_HALF_ANGLE_DEG = 60.0
@@ -23,7 +33,7 @@ LIGHT_MAX_MPH = 12.0
 # dawn lands a minute or two after 7:00, which would otherwise drop the 7am hour.
 DAWN_GRACE = timedelta(minutes=15)
 
-FLAT = "flat"  # face height below the smallest bucket
+FLAT = "flat"  # surf height below the smallest bucket
 UNKNOWN = "unknown"  # no wave data at all
 
 # Checks in the order they are reported: hard filters first, then factors.
@@ -48,7 +58,7 @@ COMPASS = ("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
 @dataclass(frozen=True)
 class ScoredHour:
     hour: Hour
-    face_ft: float | None
+    surf_ft: float | None  # Surfline-scale surf height
     size: str  # size bucket name, FLAT or UNKNOWN
     wind: str  # glassy | light | windy
     wind_aspect: str  # offshore | onshore | cross-shore
@@ -71,25 +81,40 @@ class ScoredHour:
         return self.passes and s["size"] == "fav" and (s["wind"] == "fav" or s["tide"] == "fav")
 
 
-def period_factor(period_s: float) -> float:
-    return min(PERIOD_FACTOR_MAX, 1 + PERIOD_GAIN_PER_S * max(0.0, period_s - PERIOD_BASE_S))
+def swell_contribution(height_m: float, period_s: float, from_deg: float | None) -> float:
+    """One swell's share of the surf height, before the spot's gain."""
+    weight = WESTERLY_WEIGHT if from_deg is not None and from_deg >= WESTERLY_FROM_DEG else 1.0
+    return height_m * FT_PER_M * (period_s / PERIOD_REF_S) ** PERIOD_POWER * weight
 
 
-def face_height_ft(hour: Hour, size_factor: float) -> float | None:
-    height, period = hour.swell_height_m, hour.swell_period_s
-    if height is None or period is None:
-        height, period = hour.wave_height_m, hour.wave_period_s
-    if height is None or period is None:
+def _swell_parts(hour: Hour) -> list[tuple[float, float, float | None]]:
+    """Swell partitions, falling back to the combined sea when none are reported."""
+    if hour.swells:
+        return hour.swells
+    if hour.wave_height_m and hour.wave_period_s:
+        return [(hour.wave_height_m, hour.wave_period_s, hour.wave_direction_deg)]
+    return []
+
+
+def surf_height_ft(hour: Hour, size_factor: float) -> float | None:
+    """Surfline-scale surf height: the energy sum of every swell's contribution, times the spot's gain."""
+    parts = _swell_parts(hour)
+    if not parts:
         return None
-    return height * FT_PER_M * period_factor(period) * size_factor
+    return size_factor * math.sqrt(sum(swell_contribution(*p) ** 2 for p in parts))
 
 
-def size_bucket(face_ft: float | None, buckets: dict[str, list[float]]) -> str:
-    """Bucket whose [min, max) contains face_ft."""
-    if face_ft is None:
+def surf_range(surf_ft: float) -> str:
+    """Surfline-style label, e.g. 3–4 ft+."""
+    return [label for start, label in SURF_RANGES if surf_ft >= start][-1]
+
+
+def size_bucket(surf_ft: float | None, buckets: dict[str, list[float]]) -> str:
+    """Bucket whose [min, max) contains surf_ft."""
+    if surf_ft is None:
         return UNKNOWN
     for name, (low, high) in buckets.items():
-        if low <= face_ft < high:
+        if low <= surf_ft < high:
             return name
     return FLAT
 
@@ -141,8 +166,8 @@ def is_free(start: datetime, free_hours: dict[str, list[list[int]]]) -> bool:
 
 def score_hour(hour: Hour, config: dict[str, Any]) -> ScoredHour:
     spot, prefs = config["spot"], config["preferences"]
-    face = face_height_ft(hour, spot["size_factor"])
-    size = size_bucket(face, config["size_buckets"])
+    surf = surf_height_ft(hour, spot["size_factor"])
+    size = size_bucket(surf, config["size_buckets"])
     aspect = wind_aspect(hour.wind_direction_deg, spot["faces_deg"])
     wind = wind_class(hour.wind_speed_mph, aspect)
     level = tide_level(hour.tide_ft, hour.tide_next_ft, hour.tide_day_low_ft, hour.tide_day_high_ft, spot["high_tide_ft"])
@@ -157,7 +182,7 @@ def score_hour(hour: Hour, config: dict[str, Any]) -> ScoredHour:
         "tide_direction": "ok" if prefs["tide_direction"].get(direction, False) else "skip",
     }
     failures = tuple(REASONS.get(c, c) for c in CHECKS if states[c] == "skip")
-    return ScoredHour(hour, face, size, wind, aspect, level, direction, states, failures)
+    return ScoredHour(hour, surf, size, wind, aspect, level, direction, states, failures)
 
 
 def _tide_state(hour: Hour, level: str, tide_prefs: dict[str, str], ideal_tide_ft: float) -> str:
@@ -193,10 +218,10 @@ def size_label(size: str) -> str:
 def explain(sh: ScoredHour, config: dict[str, Any]) -> dict[str, str]:
     """One line per factor: size, wind, tide, rain, daylight."""
     h = sh.hour
-    if sh.face_ft is None:
+    if sh.surf_ft is None:
         size = "No swell data"
     else:
-        size = f"{size_label(sh.size).capitalize()}, {sh.face_ft:.1f} ft faces ({swell_detail(h)})"
+        size = f"{surf_range(sh.surf_ft)}, {size_label(sh.size)} ({swell_detail(h)})"
     return {
         "size": size,
         "wind": f"{sh.wind.capitalize()}, {h.wind_speed_mph:.0f} mph {sh.wind_aspect}",
@@ -207,12 +232,15 @@ def explain(sh: ScoredHour, config: dict[str, Any]) -> dict[str, str]:
 
 
 def swell_detail(h: Hour) -> str:
-    """The forecast behind the face height, e.g. "1.5 m at 12 s from W"."""
-    use_swell = h.swell_height_m is not None and h.swell_period_s is not None
-    height = h.swell_height_m if use_swell else h.wave_height_m
-    period = h.swell_period_s if use_swell else h.wave_period_s
-    direction = h.swell_direction_deg if use_swell else h.wave_direction_deg
-    return f"{height:.1f} m at {period:.0f} s from {compass(direction)}"
+    """The swells behind the surf height, biggest first, e.g. "2.6 ft at 13 s from SSW + 1.2 ft at 10 s from WNW".
+
+    Shows at most two, skipping any under a quarter of the biggest one's contribution."""
+    parts = sorted(_swell_parts(h), key=lambda p: -swell_contribution(*p))
+    if not parts:
+        return "no swell data"
+    top = swell_contribution(*parts[0])
+    shown = [p for p in parts[:2] if swell_contribution(*p) >= top / 4]
+    return " + ".join(f"{m * FT_PER_M:.1f} ft at {t:.0f} s from {compass(d)}" for m, t, d in shown)
 
 
 def rain_text(rain_in: float, config: dict[str, Any]) -> str:

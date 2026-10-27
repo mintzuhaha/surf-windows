@@ -42,7 +42,7 @@ DECISIONS.md
 ## Data sources (free, no API keys)
 
 - **Swell:** Open-Meteo Marine, `https://marine-api.open-meteo.com/v1/marine`
-  - `hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction`
+  - `hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction,secondary_swell_wave_height,secondary_swell_wave_period,secondary_swell_wave_direction,wind_wave_height,wind_wave_period,wind_wave_direction`
   - `timezone=America/Los_Angeles&forecast_days=7`
   - Heights are meters by default. Directions are where waves come FROM (0° = north).
 - **Wind and rain:** Open-Meteo Forecast, `https://api.open-meteo.com/v1/forecast`
@@ -64,8 +64,8 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
    - `busy`: the hour must fall inside a free slot for that day (weekday vs weekend lists in config).
    - `rain`: if total precipitation in the prior `rain.skip_after_hours` hours is >= `rain.threshold_in`, the hour fails.
 2. **Classify** the hour:
-   - **Face height (ft)** = `swell_wave_height_m × 3.281 × period_factor × spot.size_factor`, where `period_factor = min(1.4, 1 + 0.05 × max(0, period_s − 10))`. Fall back to `wave_height` / `wave_period` when swell values are null. These constants are starting guesses: keep them in one place and note any change in DECISIONS.md.
-   - **Size bucket** from `size_buckets` in config.
+   - **Surf height (ft, Surfline's scale)** = `spot.size_factor × sqrt(Σ c²)` over the primary swell, secondary swell and wind waves, where each `c = height_m × 3.281 × (period_s / 10)^0.8`, × 0.8 for swells from 245° or more (west/NW swells wrap into the point and lose size). Fall back to `wave_height` / `wave_period` when no partition is reported. Fitted to Surfline; constants live in score.py, and any refit goes in DECISIONS.md.
+   - **Size bucket** from `size_buckets` in config, on the same Surfline scale. Show sizes as Surfline-style ranges (`3–4 ft`, `3–4 ft+`, `4–6 ft`), not face heights.
    - **Wind class.** Offshore = wind blowing FROM within ±60° of `(spot.faces_deg + 180) mod 360`. `glassy` = speed < 5 mph or offshore. `light` = not glassy and speed <= 12 mph. `windy` = everything else.
    - **Tide level:** `high` when the tide reaches the break's `spot.high_tide_ft` (Pleasure Point: 4.2 ft) at the start or end of the hour. Below that, the bottom third of that calendar day's predicted range = `low`, the rest = `mid`. **Direction** from the next hour's predicted height (`rising` / `falling`).
 3. **Apply preferences.** Each factor's value maps to `skip | ok | fav` in config.
@@ -80,12 +80,12 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
 - A window is **favored** when at least half its hours are favored.
 - A window is **tentative** when it starts `tentative_after_days` (3) or more calendar days after today, by local date: `(window_date - today).days >= tentative_after_days`.
 - Stable id: `f"{spot_id}-{YYYYMMDD}-{start_hour:02d}"`.
-- **Near misses:** if there are fewer than 2 windows this week, also return the top 5 daylight + free hours that failed exactly one factor, with that reason (e.g. "Thu 8am: chest-high, but 14 mph onshore"). The page uses these for its empty state.
+- **Near misses:** if there are fewer than 2 windows this week, also return the top 5 daylight + free hours that failed exactly one factor, with that reason (e.g. "Thu 8am: 3–4 ft, but 14 mph onshore"). The page uses these for its empty state.
 
 ## Calendar feed (`/feed.ics`)
 
 - One `VEVENT` per window. `UID` = window id + `@surf-windows`. Include `DTSTAMP`. Use `America/Los_Angeles` times.
-- `SUMMARY`: `★ Surf: Pleasure Point · chest-high · glassy` for favored, `Surf: Pleasure Point · waist-high` otherwise. Prefix tentative ones `Surf (tentative): …`.
+- `SUMMARY`: `★ Surf: Pleasure Point · 3–4 ft+ · glassy` for favored (or `· ideal tide` when the tide earned the star), `Surf: Pleasure Point · 2–3 ft` otherwise. Prefix tentative ones `Surf (tentative): …`.
 - `DESCRIPTION`: one line per factor (size, wind, tide, rain, daylight) and `Updated <local time>`.
 - Calendar headers: `X-WR-CALNAME:Surf windows`, `REFRESH-INTERVAL;VALUE=DURATION:PT3H`, `X-PUBLISHED-TTL:PT3H`.
 - `?skip=<window id>,<window id>` leaves those windows out. Everything else, including windows that appear later, stays in.

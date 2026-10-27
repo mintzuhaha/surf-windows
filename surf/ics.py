@@ -7,7 +7,7 @@ from typing import Any
 
 from icalendar import Calendar, Event
 
-from surf.score import format_time, size_label
+from surf.score import format_time, surf_range
 from surf.windows import Window, describe_window
 
 REFRESH = timedelta(hours=3)
@@ -47,9 +47,9 @@ def build_feed(
 
 
 def summary(w: Window, config: dict[str, Any]) -> str:
-    """★ Surf: Pleasure Point · chest-high · glassy, or Surf (tentative): Pleasure Point · waist-high."""
+    """★ Surf: Pleasure Point · 3–4 ft+ · glassy, or Surf (tentative): Pleasure Point · 2–3 ft."""
     label = "Surf (tentative)" if w.tentative else "Surf"
-    text = f"{label}: {config['spot']['name']} · {size_label(w.size)}"
+    text = f"{label}: {config['spot']['name']} · {surf_range(w.surf_ft)}"
     if not w.favored:
         return text
     wind_is_fav = config["preferences"]["wind"].get(w.wind) == "fav"

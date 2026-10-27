@@ -8,7 +8,7 @@ from datetime import date, datetime
 from typing import Any
 
 from surf.score import (
-    FLAT, UNKNOWN, ScoredHour, daylight_text, format_time, rain_text, size_label, swell_detail,
+    FLAT, UNKNOWN, ScoredHour, daylight_text, format_time, rain_text, size_label, surf_range, swell_detail,
 )
 
 NEAR_MISS_LIMIT = 5
@@ -31,6 +31,12 @@ class Window:
     @property
     def end(self) -> datetime:
         return self.hours[-1].hour.end
+
+    @property
+    def surf_ft(self) -> float:
+        """Mean Surfline-scale surf height across the window's hours."""
+        heights = [h.surf_ft for h in self.hours if h.surf_ft is not None]
+        return sum(heights) / len(heights) if heights else 0.0
 
     @property
     def size(self) -> str:
@@ -84,8 +90,7 @@ def find_windows(scored: list[ScoredHour], config: dict[str, Any], today: date) 
 def describe_window(w: Window, config: dict[str, Any]) -> list[tuple[str, str, str]]:
     """(factor, text, state) for size, wind, tide, rain and daylight. State is fav or ok."""
     first, last = w.hours[0].hour, w.hours[-1].hour
-    peak = max(w.hours, key=lambda h: h.face_ft or 0.0)
-    faces = [h.face_ft for h in w.hours if h.face_ft is not None]
+    peak = max(w.hours, key=lambda h: h.surf_ft or 0.0)
     speeds = [h.hour.wind_speed_mph for h in w.hours]
     aspect = _most_common([h.wind_aspect for h in w.hours])
     levels = " to ".join(_unique([h.tide_level for h in w.hours]))
@@ -94,7 +99,7 @@ def describe_window(w: Window, config: dict[str, Any]) -> list[tuple[str, str, s
         return _most_common([h.states[factor] for h in w.hours])
 
     return [
-        ("size", f"{size_label(w.size).capitalize()}, {_span(faces)} ft faces ({swell_detail(peak.hour)})", state("size")),
+        ("size", f"{surf_range(w.surf_ft)}, {size_label(w.size)} ({swell_detail(peak.hour)})", state("size")),
         ("wind", f"{w.wind.capitalize()}, {_span(speeds)} mph {aspect}", state("wind")),
         ("tide", f"{levels.capitalize()}, {directions} ({first.tide_ft:.1f} → {last.tide_next_ft:.1f} ft)", state("tide")),
         ("rain", rain_text(max(h.hour.rain_prior_in for h in w.hours), config), "ok"),
@@ -125,7 +130,7 @@ def find_near_misses(
 def near_miss_text(sh: ScoredHour, config: dict[str, Any]) -> str:
     start = sh.hour.start
     when = f"{start:%a} {format_time(start, minutes=False)}"
-    lead = sh.wind if sh.reason == "size" else size_label(sh.size)
+    lead = sh.wind if sh.reason == "size" or sh.surf_ft is None else surf_range(sh.surf_ft)
     return f"{when}: {lead}, but {_miss_phrase(sh, config)}"
 
 
@@ -134,13 +139,13 @@ def _miss_phrase(sh: ScoredHour, config: dict[str, Any]) -> str:
     if sh.reason == "rain":
         return rain_text(h.rain_prior_in, config)
     if sh.reason == "size":
-        if sh.size in (FLAT, UNKNOWN):
+        if sh.size in (FLAT, UNKNOWN) or sh.surf_ft is None:
             return size_label(sh.size)
         names = list(config["size_buckets"])
         wanted = [n for n in names if config["preferences"]["size"].get(n, "skip") != "skip"]
         if wanted and names.index(sh.size) < names.index(wanted[0]):
-            return f"only {size_label(sh.size)}"
-        return f"too big ({size_label(sh.size)})"
+            return f"only {surf_range(sh.surf_ft)}"
+        return f"too big at {surf_range(sh.surf_ft)}"
     if sh.reason == "wind":
         return f"{h.wind_speed_mph:.0f} mph {sh.wind_aspect}"
     if sh.reason == "tide":

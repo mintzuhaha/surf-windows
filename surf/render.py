@@ -7,7 +7,7 @@ from html import escape
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
-from surf.score import ScoredHour, format_time, size_label
+from surf.score import ScoredHour, format_time, size_label, surf_range
 from surf.windows import Window, describe_window
 
 if TYPE_CHECKING:
@@ -233,7 +233,7 @@ def _confidence(w: Window) -> str:
 
 
 def _window_title(w: Window) -> str:
-    return f"{size_label(w.size)}, {w.wind}, {w.tide_level} tide"
+    return f"{surf_range(w.surf_ft)}, {size_label(w.size)}, {w.wind}, {w.tide_level} tide"
 
 
 def _hour_title(sh: ScoredHour) -> str:
@@ -241,7 +241,8 @@ def _hour_title(sh: ScoredHour) -> str:
     reason = {"dark": "dark", "busy": "outside your free hours"}.get(sh.reason or "", "")
     if reason:
         return f"{when}: {reason}"
-    detail = f"{size_label(sh.size)}, {sh.wind} {sh.hour.wind_speed_mph:.0f} mph, {sh.tide_level} tide"
+    size = size_label(sh.size) if sh.surf_ft is None else surf_range(sh.surf_ft)
+    detail = f"{size}, {sh.wind} {sh.hour.wind_speed_mph:.0f} mph, {sh.tide_level} tide"
     return f"{when}: {detail}" + (f" (fails {sh.reason.replace('_', ' ')})" if sh.reason else "")
 
 

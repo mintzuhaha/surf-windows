@@ -42,7 +42,7 @@ def test_does_not_merge_across_midnight(config):
 
 
 def test_favored_when_at_least_half_the_hours_are(config):
-    waist = {"swell_height_m": 1.0}
+    waist = {"swell_height_m": 0.5}
     two = find_windows(score_hours([saturday(7), saturday(8, **waist)], config), config, TODAY)
     assert two[0].favored
     three = find_windows(score_hours([saturday(7), saturday(8, **waist), saturday(9, **waist)], config), config, TODAY)
@@ -72,15 +72,15 @@ def test_near_misses_fail_exactly_one_factor_in_daylight_and_free_hours(config):
         make_hour(start=local(2026, 10, 29, 10), **windy()),               # busy (weekday 10am)
         make_hour(start=local(2026, 10, 29, 6), **windy()),                # dark (before 7am dawn)
         make_hour(start=local(2026, 10, 29, 17), **windy(tide_ft=5.5)),    # two misses
-        make_hour(start=local(2026, 10, 28, 17), swell_height_m=0.5),      # one miss: size
+        make_hour(start=local(2026, 10, 28, 17), swell_height_m=0.25),     # one miss: size
         make_hour(start=local(2026, 10, 28, 7), rain_prior_in=0.4),        # one miss: rain
     ]
     scored = score_hours(hours, config)
     misses = find_near_misses(scored, find_windows(scored, config, TODAY), config)
     assert [m.text for m in misses] == [
-        'Wed 7am: chest-high, but 0.40" of rain in the prior 72 hours',
-        "Wed 5pm: glassy, but only knee-high",
-        "Thu 8am: chest-high, but 14 mph onshore",
+        'Wed 7am: 3–4 ft+, but 0.40" of rain in the prior 72 hours',
+        "Wed 5pm: glassy, but only 1–2 ft",
+        "Thu 8am: 3–4 ft+, but 14 mph onshore",
     ]
 
 

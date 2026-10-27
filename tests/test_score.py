@@ -5,30 +5,39 @@ import pytest
 from conftest import local, make_hour
 from surf.normalize import normalize
 from surf.score import (
-    explain, face_height_ft, period_factor, score_hour, size_bucket, tide_direction,
+    explain, score_hour, size_bucket, surf_height_ft, surf_range, swell_contribution, tide_direction,
     tide_level, wind_aspect, wind_class,
 )
 
 
-@pytest.mark.parametrize("period_s, expected", [(8, 1.0), (10, 1.0), (12, 1.1), (30, 1.4)])
-def test_period_factor_grows_past_10s_and_caps(period_s, expected):
-    assert period_factor(period_s) == pytest.approx(expected)
+def test_swell_contribution_grows_with_period_and_drops_for_westerly_swell():
+    # 0.7 m = 2.297 ft; (12 s / 10 s) ** 0.8 = 1.157
+    assert swell_contribution(0.7, 12, 205) == pytest.approx(2.657, abs=0.001)
+    assert swell_contribution(0.7, 16, 205) == pytest.approx(2.297 * 1.6 ** 0.8, abs=0.001)
+    assert swell_contribution(0.7, 12, 270) == pytest.approx(2.657 * 0.8, abs=0.001)
 
 
-def test_face_height_uses_swell():
-    # 1.5 m * 3.281 * 1.1 (12 s) * 0.6
-    assert face_height_ft(make_hour(), 0.6) == pytest.approx(3.248, abs=0.001)
+def test_surf_height_is_energy_sum_of_swells_times_gain():
+    assert surf_height_ft(make_hour(), 1.4) == pytest.approx(1.4 * 2.657, abs=0.002)
+    two = make_hour(secondary_swell_height_m=0.7, secondary_swell_period_s=12.0, secondary_swell_direction_deg=205.0)
+    assert surf_height_ft(two, 1.4) == pytest.approx(1.4 * 2.657 * 2 ** 0.5, abs=0.002)
 
 
-def test_face_height_falls_back_to_wave_when_swell_is_null():
+def test_surf_height_falls_back_to_combined_sea_without_partitions():
     hour = make_hour(swell_height_m=None, swell_period_s=None)
-    # 1.6 m * 3.281 * 1.05 (11 s) * 0.6
-    assert face_height_ft(hour, 0.6) == pytest.approx(3.307, abs=0.001)
+    assert surf_height_ft(hour, 1.4) == pytest.approx(1.4 * 0.8 * 3.281 * 1.1 ** 0.8, abs=0.002)
 
 
-def test_face_height_none_without_any_wave_data():
-    hour = make_hour(swell_height_m=None, wave_height_m=None)
-    assert face_height_ft(hour, 0.6) is None
+def test_surf_height_none_without_any_wave_data():
+    assert surf_height_ft(make_hour(swell_height_m=None, wave_height_m=None), 1.4) is None
+
+
+@pytest.mark.parametrize("ft, label", [
+    (0.5, "0–1 ft"), (2.7, "2–3 ft+"), (3.5, "3–4 ft"), (3.7, "3–4 ft+"), (4.2, "4–5 ft"),
+    (5.0, "4–6 ft"), (6.0, "5–7 ft"), (7.0, "6–8 ft"),
+])
+def test_surfline_style_ranges(ft, label):
+    assert surf_range(ft) == label
 
 
 def test_size_buckets_are_half_open(config):
@@ -122,7 +131,7 @@ def test_rain_threshold_is_inclusive(config):
 
 
 def test_ok_size_passes_without_favor(config):
-    sh = score_hour(make_hour(swell_height_m=1.0), config)  # 2.17 ft -> waist
+    sh = score_hour(make_hour(swell_height_m=0.5), config)  # 2.7 ft -> waist
     assert sh.size == "waist" and sh.passes and not sh.favored
 
 
@@ -146,7 +155,7 @@ def test_every_failure_is_recorded(config):
 def test_explanation_has_every_factor(config):
     lines = explain(score_hour(make_hour(), config), config)
     assert lines == {
-        "size": "Chest-high, 3.2 ft faces (1.5 m at 12 s from W)",
+        "size": "3–4 ft+, chest-high (2.3 ft at 12 s from SSW)",
         "wind": "Glassy, 3 mph offshore",
         "tide": "Low, rising (1.0 → 1.5 ft)",
         "rain": "No rain in the prior 72 hours",

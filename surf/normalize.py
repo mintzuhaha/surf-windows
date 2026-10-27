@@ -33,10 +33,26 @@ class Hour:
     dawn: datetime  # civil dawn
     sunrise: datetime
     sunset: datetime
+    secondary_swell_height_m: float | None = None
+    secondary_swell_period_s: float | None = None
+    secondary_swell_direction_deg: float | None = None
+    wind_wave_height_m: float | None = None
+    wind_wave_period_s: float | None = None
+    wind_wave_direction_deg: float | None = None
 
     @property
     def end(self) -> datetime:
         return self.start + timedelta(hours=1)
+
+    @property
+    def swells(self) -> list[tuple[float, float, float | None]]:
+        """(height m, period s, from deg) for primary swell, secondary swell and wind waves that exist."""
+        parts = [
+            (self.swell_height_m, self.swell_period_s, self.swell_direction_deg),
+            (self.secondary_swell_height_m, self.secondary_swell_period_s, self.secondary_swell_direction_deg),
+            (self.wind_wave_height_m, self.wind_wave_period_s, self.wind_wave_direction_deg),
+        ]
+        return [(h, t, d) for h, t, d in parts if h and t]
 
 
 def normalize(raw: dict[str, dict[str, Any]], config: dict[str, Any], now: datetime) -> list[Hour]:
@@ -99,9 +115,21 @@ def normalize(raw: dict[str, dict[str, Any]], config: dict[str, Any], now: datet
                 dawn=day["dawn"],
                 sunrise=day["sunrise"],
                 sunset=day["sunset"],
+                secondary_swell_height_m=_at(marine, "secondary_swell_wave_height", i),
+                secondary_swell_period_s=_at(marine, "secondary_swell_wave_period", i),
+                secondary_swell_direction_deg=_at(marine, "secondary_swell_wave_direction", i),
+                wind_wave_height_m=_at(marine, "wind_wave_height", i),
+                wind_wave_period_s=_at(marine, "wind_wave_period", i),
+                wind_wave_direction_deg=_at(marine, "wind_wave_direction", i),
             )
         )
     return hours
+
+
+def _at(series: dict[str, list[Any]], key: str, i: int) -> Any:
+    """Value of an optional hourly series, or None when the source didn't return it."""
+    values = series.get(key)
+    return values[i] if values else None
 
 
 def _tide_day_ranges(tides: dict[datetime, float]) -> dict[date, tuple[float, float]]:

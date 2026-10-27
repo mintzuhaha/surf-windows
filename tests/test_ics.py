@@ -11,7 +11,7 @@ from surf.windows import find_windows
 
 TODAY = date(2026, 10, 27)
 NOW = local(2026, 10, 27, 15, 5)
-WAIST = {"swell_height_m": 1.0}
+WAIST = {"swell_height_m": 0.5}
 
 
 def windows_for(config, day: int, hours=(7, 8), **overrides):
@@ -46,22 +46,22 @@ def test_summaries(config):
     [plain] = windows_for(config, 28, **WAIST)
     [tentative] = windows_for(config, 30, **WAIST)
     [favored_tentative] = windows_for(config, 30)
-    assert summary(favored, config) == "★ Surf: Pleasure Point · chest-high · glassy"
-    assert summary(plain, config) == "Surf: Pleasure Point · waist-high"
-    assert summary(tentative, config) == "Surf (tentative): Pleasure Point · waist-high"
-    assert summary(favored_tentative, config) == "★ Surf (tentative): Pleasure Point · chest-high · glassy"
+    assert summary(favored, config) == "★ Surf: Pleasure Point · 3–4 ft+ · glassy"
+    assert summary(plain, config) == "Surf: Pleasure Point · 2–3 ft+"
+    assert summary(tentative, config) == "Surf (tentative): Pleasure Point · 2–3 ft+"
+    assert summary(favored_tentative, config) == "★ Surf (tentative): Pleasure Point · 3–4 ft+ · glassy"
 
 
 def test_favored_by_tide_names_the_tide(config):
     [window] = windows_for(config, 28, wind_speed_mph=8, wind_direction_deg=180)
-    assert summary(window, config) == "★ Surf: Pleasure Point · chest-high · ideal tide"
+    assert summary(window, config) == "★ Surf: Pleasure Point · 3–4 ft+ · ideal tide"
 
 
 def test_description_has_one_line_per_factor_and_updated(config):
     [window] = windows_for(config, 28)
     event = Calendar.from_ical(build_feed([window], config, NOW)).walk("VEVENT")[0]
     assert str(event["description"]).split("\n") == [
-        "Size: Chest-high, 3 ft faces (1.5 m at 12 s from W) ★",
+        "Size: 3–4 ft+, chest-high (2.3 ft at 12 s from SSW) ★",
         "Wind: Glassy, 3 mph offshore ★",
         "Tide: Low, rising (1.0 → 1.5 ft) ★",
         "Rain: No rain in the prior 72 hours",
