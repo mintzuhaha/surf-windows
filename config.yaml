@@ -1,0 +1,49 @@
+# Surf Windows configuration.
+# Preference states are strings: skip | ok | fav
+# (Avoid on/off: YAML reads those as booleans.)
+
+spot:
+  id: pleasure-point
+  name: Pleasure Point
+  lat: 36.95469
+  lon: -121.97253
+  timezone: America/Los_Angeles
+  noaa_station: "9413745"   # Santa Cruz, Monterey Bay
+  faces_deg: 180            # direction the break faces, toward the ocean. Starting guess: set your own.
+  size_factor: 0.6          # sheltered spots break smaller than the open-ocean forecast. Starting guess: calibrate.
+
+size_buckets:               # face height in feet, [min, max)
+  knee:     [1.0, 2.0]
+  waist:    [2.0, 3.0]
+  chest:    [3.0, 4.5]
+  head:     [4.5, 6.0]
+  overhead: [6.0, 8.0]
+  way_over: [8.0, 99.0]
+
+preferences:
+  size:
+    knee: skip
+    waist: ok
+    chest: fav
+    head: fav
+    overhead: skip
+    way_over: skip
+  tide:
+    low: ok
+    mid: ok
+    high: skip
+  tide_direction:
+    rising: true
+    falling: true
+  wind:
+    glassy: fav
+    light: ok
+    windy: skip
+  rain:
+    skip_after_hours: 72
+    threshold_in: 0.1
+  min_window_hours: 2
+  tentative_after_days: 3
+  free_hours:               # 24-hour clock, [start, end)
+    weekdays: [[6, 9], [16, 19]]
+    weekends: [[6, 15]]
