@@ -49,7 +49,7 @@ def build_feed(
 def summary(w: Window, config: dict[str, Any]) -> str:
     """★ Surf: Pleasure Point · 3–4 ft+ · glassy, or Surf (tentative): Pleasure Point · 2–3 ft."""
     label = "Surf (tentative)" if w.tentative else "Surf"
-    text = f"{label}: {config['spot']['name']} · {surf_range(w.surf_ft)}"
+    text = f"{label}: {config['spot']['name']} · {surf_range(w.surf_ft)}{' ⚠ big waves' if w.big_waves else ''}"
     if not w.favored:
         return text
     wind_is_fav = config["preferences"]["wind"].get(w.wind) == "fav"
@@ -59,6 +59,7 @@ def summary(w: Window, config: dict[str, Any]) -> str:
 def description(w: Window, config: dict[str, Any], now: datetime) -> str:
     lines = [
         f"{factor.capitalize()}: {text}{' ★' if state == 'fav' else ''}"
+        + (" ⚠ big waves" if factor == "size" and w.big_waves else "")
         for factor, text, state in describe_window(w, config)
     ]
     lines.append(f"Updated {now:%a %b} {now.day}, {format_time(now)}")

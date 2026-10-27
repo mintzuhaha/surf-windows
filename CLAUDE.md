@@ -71,6 +71,7 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
 3. **Apply preferences.** Each factor's value maps to `skip | ok | fav` in config.
    - The tide state is upgraded to `fav` when the tide stays below the break's `spot.ideal_tide_ft` (Pleasure Point: 3.7 ft) at the start and end of the hour, unless its level is `skip`.
    - The hour **passes** when no factor is `skip` and its tide direction is enabled.
+   - Sizes listed in `preferences.warn_sizes` (Pleasure Point: `overhead`, 5–7 ft) pass but carry a big-wave warning; 6–8 ft and up (`way_over`) is a no-go.
    - The hour is **favored** when size is `fav` AND (wind is `fav` OR tide level is `fav`).
 4. Every hour keeps an explanation: each factor's value and state, plus the failure reason when it fails.
 
@@ -85,7 +86,7 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
 ## Calendar feed (`/feed.ics`)
 
 - One `VEVENT` per window. `UID` = window id + `@surf-windows`. Include `DTSTAMP`. Use `America/Los_Angeles` times.
-- `SUMMARY`: `★ Surf: Pleasure Point · 3–4 ft+ · glassy` for favored (or `· ideal tide` when the tide earned the star), `Surf: Pleasure Point · 2–3 ft` otherwise. Prefix tentative ones `Surf (tentative): …`.
+- `SUMMARY`: `★ Surf: Pleasure Point · 3–4 ft+ · glassy` for favored (or `· ideal tide` when the tide earned the star), `Surf: Pleasure Point · 2–3 ft` otherwise. Prefix tentative ones `Surf (tentative): …`. Windows with big waves add `⚠ big waves` after the size.
 - `DESCRIPTION`: one line per factor (size, wind, tide, rain, daylight) and `Updated <local time>`.
 - Calendar headers: `X-WR-CALNAME:Surf windows`, `REFRESH-INTERVAL;VALUE=DURATION:PT3H`, `X-PUBLISHED-TTL:PT3H`.
 - `?skip=<window id>,<window id>` leaves those windows out. Everything else, including windows that appear later, stays in.
@@ -94,7 +95,7 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
 
 - Header with the spot name and "Updated N minutes ago".
 - Label the windows section "Next 7 days", not "This week".
-- Windows grouped by day: time range, size, wind, tide, plus rain and daylight checks. Favored windows look stronger; tentative ones are labeled.
+- Windows grouped by day: time range, size, wind, tide, plus rain and daylight checks. Favored windows look stronger; tentative ones are labeled; big-wave windows get a "⚠ Big waves" badge (card and grid).
 - Empty state: "Flat week. Here's what's closest:" followed by the near misses with reasons.
 - Buttons: "Add to Google Calendar" using Google's add-by-URL link (`https://calendar.google.com/calendar/render?cid=<url-encoded webcal:// feed URL>`; verify it works on desktop and phone) and "Copy feed link".
 - Each window card has an "Add" checkbox, all checked by default, plus "Select all" / "Deselect all". The Google button, copy button and feed URL leave unchecked windows out via `?skip=`.

@@ -170,3 +170,11 @@ def test_fixture_hours_start_at_current_hour(raw, config, recorded_at):
     assert len(hours) > 140  # rest of today plus six more days
     scored = [score_hour(h, config) for h in hours]
     assert all(s.reason == "dark" for s in scored if s.hour.start.hour in (0, 3, 22))
+
+
+def test_overhead_passes_with_a_big_wave_warning_and_beyond_7_ft_is_a_no_go(config):
+    overhead = score_hour(make_hour(swell_height_m=1.1), config)  # 5.8 ft -> 5-7 ft
+    assert (overhead.size, overhead.passes, overhead.big_waves, overhead.favored) == ("overhead", True, True, False)
+    too_big = score_hour(make_hour(swell_height_m=1.4), config)  # 7.4 ft -> 6-8 ft
+    assert too_big.size == "way_over" and too_big.failures == ("size",)
+    assert not score_hour(make_hour(), config).big_waves

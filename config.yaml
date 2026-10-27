@@ -19,8 +19,8 @@ size_buckets:               # Surfline-scale surf height in feet, [min, max)
   waist:    [2.0, 3.0]      # 2-3 ft
   chest:    [3.0, 4.0]      # 3-4 ft (Surfline: waist to shoulder)
   head:     [4.0, 5.5]      # 4-5 and 4-6 ft
-  overhead: [5.5, 8.0]      # 5-7 and 6-8 ft
-  way_over: [8.0, 99.0]     # 8 ft and up
+  overhead: [5.5, 6.5]      # 5-7 ft
+  way_over: [6.5, 99.0]     # 6-8 ft and up: sets run past 7 ft
 
 preferences:
   size:
@@ -28,8 +28,8 @@ preferences:
     waist: ok
     chest: fav
     head: fav
-    overhead: skip
-    way_over: skip
+    overhead: ok              # surfable, but flagged with a big-wave warning (warn_sizes)
+    way_over: skip            # beyond 7 ft is a no-go
   tide:
     low: ok
     mid: ok
@@ -44,6 +44,7 @@ preferences:
   rain:
     skip_after_hours: 72
     threshold_in: 0.1
+  warn_sizes: [overhead]      # sizes shown with a "⚠ Big waves" warning
   min_window_hours: 2
   tentative_after_days: 3
   free_hours:               # 24-hour clock, [start, end). All day by default; narrow these to your schedule.

@@ -6,6 +6,7 @@ turns them into hourly records.
 
 from __future__ import annotations
 
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from typing import Any
@@ -16,6 +17,7 @@ MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 TIDES_URL = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
 TIMEOUT_S = 10.0
+RETRY_DELAY_S = 0.5
 FORECAST_DAYS = 7
 
 
@@ -79,5 +81,9 @@ def fetch_all(spot: dict[str, Any], today: date) -> dict[str, dict[str, Any]]:
 
 def _get_json(url: str, params: dict[str, Any]) -> dict[str, Any]:
     response = httpx.get(url, params=params, timeout=TIMEOUT_S)
+    if response.status_code >= 500:
+        # NOAA returns brief 502/504s; one quick retry. Timeouts aren't retried, to stay inside the function limit.
+        time.sleep(RETRY_DELAY_S)
+        response = httpx.get(url, params=params, timeout=TIMEOUT_S)
     response.raise_for_status()
     return response.json()

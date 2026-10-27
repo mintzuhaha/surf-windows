@@ -86,7 +86,7 @@ def _grid(f: Forecast) -> str:
                 w, is_first = window_at[slot]
                 if is_first:
                     cls = ("fav" if w.favored else "ok") + (" tent" if w.tentative else "")
-                    star = "★ " if w.favored else ""
+                    star = ("★ " if w.favored else "") + ("⚠ " if w.big_waves else "")
                     cells.append(f'<a class="cell win {cls}" href="#{w.id}" style="{place} / span {len(w.hours)}" '
                                  f'title="{escape(_window_title(w))}">{star}{_time_range(w.start, w.end)}</a>')
                 continue
@@ -105,7 +105,7 @@ def _legend() -> str:
              ("nofit", "Conditions don't fit"), ("busy", "Outside your free hours"), ("dark", "Dark"),
              ("rain", "72 hours after rain")]
     spans = "".join(f'<span><i class="sw {cls}"></i>{label}</span>' for cls, label in items)
-    return f'<div class="legend">{spans}</div>'
+    return f'<div class="legend">{spans}<span>⚠ Big waves</span></div>'
 
 
 def _window_list(windows: list[Window], config: dict[str, Any]) -> str:
@@ -126,10 +126,14 @@ def _window_card(w: Window, config: dict[str, Any]) -> str:
     badge = '<span class="badge fav">★ Favored</span>' if w.favored else '<span class="badge ok">Will surf</span>'
     if w.tentative:
         badge += '<span class="badge tent">Tentative</span>'
+    if w.big_waves:
+        badge += '<span class="badge warn">⚠ Big waves</span>'
     chips = {"fav": '<span class="chip fav">★ Favored</span>', "ok": '<span class="chip ok">Will surf</span>'}
     rows = []
     for factor, text, state in describe_window(w, config):
         chip = chips[state] if factor in ("size", "wind", "tide") else '<span class="chip check">✓</span>'
+        if factor == "size" and w.big_waves:
+            chip = '<span class="chip warn">⚠ Big waves</span>'
         rows.append(f'<div class="row"><dt>{factor.capitalize()}</dt><dd>{escape(text)}</dd>{chip}</div>')
     rows.append(f'<div class="row"><dt>Confidence</dt><dd>{_confidence(w)}</dd></div>')
     cls = ("fav" if w.favored else "ok") + (" tent" if w.tentative else "")
@@ -316,6 +320,7 @@ main { max-width: 960px; margin: 0 auto; padding: 16px; display: grid; grid-temp
 .cell.win.ok { background: var(--ok); color: var(--text); }
 .cell.win.tent { border: 1.5px dashed var(--fav); }
 .cell.win.ok.tent { background: var(--tent); }
+.cell.win.fav.tent { border-color: var(--ok); }
 .cell.win:hover, .cell.win:focus-visible { outline: 2px solid #E0703A; outline-offset: 1px; }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 14px; font-size: 12px; color: var(--muted); }
@@ -339,6 +344,7 @@ main { max-width: 960px; margin: 0 auto; padding: 16px; display: grid; grid-temp
 .badge.fav, .chip.fav { background: var(--fav); color: #fff; }
 .badge.ok, .chip.ok { background: var(--tent); color: var(--fav); }
 .badge.tent { border: 1px dashed var(--fav); color: var(--fav); }
+.badge.warn, .chip.warn { background: #FFF1D6; color: #8A4B00; border: 1px solid #EFC27A; }
 .chip.check { color: var(--fav); background: none; font-size: 13px; }
 .factors { margin: 0; }
 .row { display: grid; grid-template-columns: 96px 1fr auto; gap: 4px 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }

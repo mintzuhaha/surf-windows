@@ -66,6 +66,7 @@ class ScoredHour:
     tide_direction: str  # rising | falling
     states: dict[str, str]  # check name -> skip | ok | fav
     failures: tuple[str, ...]  # every failed check as a reason name, in CHECKS order
+    big_waves: bool = False  # size is in preferences.warn_sizes
 
     @property
     def passes(self) -> bool:
@@ -182,7 +183,8 @@ def score_hour(hour: Hour, config: dict[str, Any]) -> ScoredHour:
         "tide_direction": "ok" if prefs["tide_direction"].get(direction, False) else "skip",
     }
     failures = tuple(REASONS.get(c, c) for c in CHECKS if states[c] == "skip")
-    return ScoredHour(hour, surf, size, wind, aspect, level, direction, states, failures)
+    big_waves = size in prefs.get("warn_sizes", [])
+    return ScoredHour(hour, surf, size, wind, aspect, level, direction, states, failures, big_waves)
 
 
 def _tide_state(hour: Hour, level: str, tide_prefs: dict[str, str], ideal_tide_ft: float) -> str:

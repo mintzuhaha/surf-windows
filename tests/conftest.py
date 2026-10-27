@@ -25,14 +25,15 @@ CONFIG: dict[str, Any] = {
     },
     "size_buckets": {
         "knee": [1.0, 2.0], "waist": [2.0, 3.0], "chest": [3.0, 4.0],
-        "head": [4.0, 5.5], "overhead": [5.5, 8.0], "way_over": [8.0, 99.0],
+        "head": [4.0, 5.5], "overhead": [5.5, 6.5], "way_over": [6.5, 99.0],
     },
     "preferences": {
-        "size": {"knee": "skip", "waist": "ok", "chest": "fav", "head": "fav", "overhead": "skip", "way_over": "skip"},
+        "size": {"knee": "skip", "waist": "ok", "chest": "fav", "head": "fav", "overhead": "ok", "way_over": "skip"},
         "tide": {"low": "ok", "mid": "ok", "high": "skip"},
         "tide_direction": {"rising": True, "falling": True},
         "wind": {"glassy": "fav", "light": "ok", "windy": "skip"},
         "rain": {"skip_after_hours": 72, "threshold_in": 0.1},
+        "warn_sizes": ["overhead"],
         "min_window_hours": 2,
         "tentative_after_days": 3,
         "free_hours": {"weekdays": [[6, 9], [16, 19]], "weekends": [[6, 15]]},

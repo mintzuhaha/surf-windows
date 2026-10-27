@@ -76,3 +76,11 @@ def test_skipped_windows_are_left_out(config):
     text = build_feed(windows, config, NOW, skip=frozenset({"pleasure-point-20261028-07"}))
     events = Calendar.from_ical(text).walk("VEVENT")
     assert [str(e["uid"]) for e in events] == ["pleasure-point-20261029-07@surf-windows"]
+
+
+def test_big_wave_windows_carry_a_warning(config):
+    [window] = windows_for(config, 28, swell_height_m=1.1)
+    assert window.big_waves
+    assert summary(window, config) == "Surf: Pleasure Point · 5–7 ft ⚠ big waves"
+    event = Calendar.from_ical(build_feed([window], config, NOW)).walk("VEVENT")[0]
+    assert str(event["description"]).split("\n")[0].endswith("⚠ big waves")

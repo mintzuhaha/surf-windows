@@ -33,6 +33,11 @@ class Window:
         return self.hours[-1].hour.end
 
     @property
+    def big_waves(self) -> bool:
+        """Any hour is in a size the preferences flag with a warning."""
+        return any(h.big_waves for h in self.hours)
+
+    @property
     def surf_ft(self) -> float:
         """Mean Surfline-scale surf height across the window's hours."""
         heights = [h.surf_ft for h in self.hours if h.surf_ft is not None]
