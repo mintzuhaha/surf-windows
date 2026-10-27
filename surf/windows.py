@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
-from surf.score import FLAT, UNKNOWN, ScoredHour, format_time, size_label
+from surf.score import (
+    FLAT, UNKNOWN, ScoredHour, daylight_text, format_time, rain_text, size_label, swell_detail,
+)
 
 NEAR_MISS_LIMIT = 5
 NEAR_MISSES_BELOW = 2  # near misses are returned when there are fewer windows than this
@@ -79,6 +81,27 @@ def find_windows(scored: list[ScoredHour], config: dict[str, Any], today: date) 
     return windows
 
 
+def describe_window(w: Window, config: dict[str, Any]) -> list[tuple[str, str, str]]:
+    """(factor, text, state) for size, wind, tide, rain and daylight. State is fav or ok."""
+    prefs = config["preferences"]
+    first, last = w.hours[0].hour, w.hours[-1].hour
+    peak = max(w.hours, key=lambda h: h.face_ft or 0.0)
+    faces = [h.face_ft for h in w.hours if h.face_ft is not None]
+    speeds = [h.hour.wind_speed_mph for h in w.hours]
+    aspect = _most_common([h.wind_aspect for h in w.hours])
+    levels = " to ".join(_unique([h.tide_level for h in w.hours]))
+    directions = " then ".join(_unique([h.tide_direction for h in w.hours]))
+    return [
+        ("size", f"{size_label(w.size).capitalize()}, {_span(faces)} ft faces ({swell_detail(peak.hour)})",
+         prefs["size"][w.size]),
+        ("wind", f"{w.wind.capitalize()}, {_span(speeds)} mph {aspect}", prefs["wind"][w.wind]),
+        ("tide", f"{levels.capitalize()}, {directions} ({first.tide_ft:.1f} → {last.tide_next_ft:.1f} ft)",
+         prefs["tide"][w.tide_level]),
+        ("rain", rain_text(max(h.hour.rain_prior_in for h in w.hours), config), "ok"),
+        ("daylight", daylight_text(first), "ok"),
+    ]
+
+
 def find_near_misses(
     scored: list[ScoredHour], windows: list[Window], config: dict[str, Any]
 ) -> list[NearMiss]:
@@ -109,8 +132,7 @@ def near_miss_text(sh: ScoredHour, config: dict[str, Any]) -> str:
 def _miss_phrase(sh: ScoredHour, config: dict[str, Any]) -> str:
     h = sh.hour
     if sh.reason == "rain":
-        hours = config["preferences"]["rain"]["skip_after_hours"]
-        return f'{h.rain_prior_in:.2f}" of rain in the prior {hours} hours'
+        return rain_text(h.rain_prior_in, config)
     if sh.reason == "size":
         if sh.size in (FLAT, UNKNOWN):
             return size_label(sh.size)
@@ -137,3 +159,13 @@ def _fav_count(sh: ScoredHour) -> int:
 
 def _most_common(values: list[str]) -> str:
     return Counter(values).most_common(1)[0][0]
+
+
+def _unique(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(values))
+
+
+def _span(values: list[float]) -> str:
+    """"3" or "3–4", rounded to whole numbers."""
+    low, high = round(min(values)), round(max(values))
+    return f"{low}" if low == high else f"{low}–{high}"

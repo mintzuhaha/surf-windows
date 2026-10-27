@@ -185,21 +185,31 @@ def explain(sh: ScoredHour, config: dict[str, Any]) -> dict[str, str]:
     if sh.face_ft is None:
         size = "No swell data"
     else:
-        use_swell = h.swell_height_m is not None and h.swell_period_s is not None
-        height = h.swell_height_m if use_swell else h.wave_height_m
-        period = h.swell_period_s if use_swell else h.wave_period_s
-        direction = h.swell_direction_deg if use_swell else h.wave_direction_deg
-        size = (f"{size_label(sh.size).capitalize()}, {sh.face_ft:.1f} ft faces "
-                f"({height:.1f} m at {period:.0f} s from {compass(direction)})")
-    rain_hours = config["preferences"]["rain"]["skip_after_hours"]
-    if h.rain_prior_in == 0:
-        rain = f"No rain in the prior {rain_hours} hours"
-    else:
-        rain = f'{h.rain_prior_in:.2f}" of rain in the prior {rain_hours} hours'
+        size = f"{size_label(sh.size).capitalize()}, {sh.face_ft:.1f} ft faces ({swell_detail(h)})"
     return {
         "size": size,
         "wind": f"{sh.wind.capitalize()}, {h.wind_speed_mph:.0f} mph {sh.wind_aspect}",
         "tide": f"{sh.tide_level.capitalize()}, {sh.tide_direction} ({h.tide_ft:.1f} → {h.tide_next_ft:.1f} ft)",
-        "rain": rain,
-        "daylight": f"Sunrise {format_time(h.sunrise)}, sunset {format_time(h.sunset)}",
+        "rain": rain_text(h.rain_prior_in, config),
+        "daylight": daylight_text(h),
     }
+
+
+def swell_detail(h: Hour) -> str:
+    """The forecast behind the face height, e.g. "1.5 m at 12 s from W"."""
+    use_swell = h.swell_height_m is not None and h.swell_period_s is not None
+    height = h.swell_height_m if use_swell else h.wave_height_m
+    period = h.swell_period_s if use_swell else h.wave_period_s
+    direction = h.swell_direction_deg if use_swell else h.wave_direction_deg
+    return f"{height:.1f} m at {period:.0f} s from {compass(direction)}"
+
+
+def rain_text(rain_in: float, config: dict[str, Any]) -> str:
+    hours = config["preferences"]["rain"]["skip_after_hours"]
+    if rain_in == 0:
+        return f"No rain in the prior {hours} hours"
+    return f'{rain_in:.2f}" of rain in the prior {hours} hours'
+
+
+def daylight_text(h: Hour) -> str:
+    return f"Sunrise {format_time(h.sunrise)}, sunset {format_time(h.sunset)}"
