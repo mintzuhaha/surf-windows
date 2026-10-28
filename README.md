@@ -4,7 +4,7 @@
 
 **Built in one afternoon with Claude Code**, with 56 offline tests. The spec is in [CLAUDE.md](CLAUDE.md), and every decision is logged in [DECISIONS.md](DECISIONS.md).
 
-Good surf is a rare alignment: waves from distant storms have to arrive alongside the right tide, wind, daylight and a few rain-free days. Surf Windows finds the hours at Pleasure Point, Santa Cruz, when they all line up, and puts them on your calendar as a live feed that updates with the forecast, so you can plan meetings and dinner plans around good surf.
+Good surf is a rare alignment: waves from distant storms have to arrive alongside the right tide, wind, daylight and a few rain-free days. Surf Windows finds the hours at Pleasure Point, Santa Cruz, when they all line up, and puts them on your calendar as a live feed that updates with the forecast, so you can plan meetings and dinners around good surf.
 
 <p>
   <img src="docs/screenshot.png" alt="The week grid and window cards on desktop, with two windows unchecked" width="68%">
@@ -36,7 +36,7 @@ Forecast apps show the conditions, but I still had to check every day and work o
 
 1. **Fetch** every swell partition, wind and rain from Open-Meteo, and hourly tide predictions from NOAA. Sunrise and sunset are computed locally.
 2. **Score each hour.** Hard filters first: daylight (from an hour before sunrise to an hour after sunset), and no surf within 72 hours of 0.1" of rain, since stormwater runoff carries bacteria into the water. Then wave size, wind and tide are each scored *skip*, *okay* or *favored*.
-   - **Wave size** is estimated on the scale used by Surfline, a popular surf-forecast app (e.g. 3–4 ft+). The model combines every swell, weighting each by its period and direction (west and northwest swells wrap into the point and lose size). Fitted to 59 Surfline forecasts, it lands within one size step of Surfline for 41 of 43 hours in the test week.
+   - **Wave size** is estimated on the scale used by Surfline, a popular surf-forecast app (e.g. 3–4 ft+). The model combines every swell, weighting each by its period and direction (west and northwest swells wrap into the point and lose size).
    - **Wind** is glassy (under 5 mph, or offshore), light (up to 12 mph) or windy.
    - **Tide** limits are set per break.
 3. **Merge** passing hours into windows of 2+ hours. A window is favored when at least half its hours are, tentative when it starts 3+ days out, and flagged when the waves are big.
@@ -47,8 +47,6 @@ Open-Meteo (swells, wind, rain) ─┐
 NOAA (tides) ────────────────────┼─> score hours -> merge windows -> page (/) + feed (/feed.ics)
 astral (sunrise, sunset) ────────┘
 ```
-
-Every non-obvious choice, with the reason for it, is logged in [DECISIONS.md](DECISIONS.md).
 
 ## What I learned
 

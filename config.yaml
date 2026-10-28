@@ -9,7 +9,7 @@ spot:
   lon: -121.97253
   timezone: America/Los_Angeles
   noaa_station: "9413450"   # Monterey. Santa Cruz (9413745) only has high/low predictions; see DECISIONS.md
-  faces_deg: 180            # direction the break faces, toward the ocean. Starting guess: set your own.
+  faces_deg: 180            # direction the break faces, toward the ocean
   high_tide_ft: 4.2         # tide reaching this (ft, MLLW) during an hour is "high". Break-specific: Pleasure Point is surfable below 4.2 ft.
   ideal_tide_ft: 3.7        # tide staying below this for the hour is favored. Pleasure Point: ideal below 3.7 ft.
   size_factor: 1.4          # gain of the surf-height model, fitted to 59 Surfline forecasts (Oct 28-Nov 4); see DECISIONS.md
