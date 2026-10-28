@@ -101,7 +101,7 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
 - Each window card has an "Add" checkbox, all checked by default, plus "Select all" / "Deselect all". The Google button, copy button and feed URL leave unchecked windows out via `?skip=`.
 - "How it works" (3 bullets), a link to the GitHub repo, and the data attribution.
 - Works at phone width.
-- Visual reference: mockup screenshots in `docs/` if present. Colors: favored `#12466F`, will-surf `#9EC5E8`, text `#10283A`, background `#F4F5F2`. Fonts: IBM Plex Sans and IBM Plex Mono (Google Fonts).
+- Visual reference: mockup screenshots in `docs/` if present. Colors (option C, chosen 2026-10-27): favored `#12873F` (dark green), okay to surf `#7EE08F` (light green), big-wave warning `#FF7A1A` (orange, used only for warnings), text `#10283A`, background `#F4F5F2`. Green text on white uses `#0E652F` for contrast. Fonts: IBM Plex Sans and IBM Plex Mono (Google Fonts).
 
 ## Caching
 

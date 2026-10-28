@@ -17,6 +17,10 @@ REPO_URL = "https://github.com/mintzuhaha/surf-windows"
 GRID_FIRST_HOUR, GRID_LAST_HOUR = 5, 19  # widened if daylight runs past these
 DAYS_SHOWN = 7
 HARD_FILTER_CELLS = {"dark": "dark", "busy": "busy", "rain": "rain"}
+# Warning triangle for big waves, drawn in currentColor.
+WARN_ICON = ('<svg class="warn-icon" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">'
+             '<path d="M12 3.5 2.5 20h19L12 3.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>'
+             '<path d="M12 10v4.5M12 17.5v.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>')
 
 
 def render_page(forecast: Forecast, feed_url: str) -> str:
@@ -86,7 +90,7 @@ def _grid(f: Forecast) -> str:
                 w, is_first = window_at[slot]
                 if is_first:
                     cls = ("fav" if w.favored else "ok") + (" tent" if w.tentative else "")
-                    star = ("★ " if w.favored else "") + ("⚠ " if w.big_waves else "")
+                    star = ("★ " if w.favored else "") + (WARN_ICON if w.big_waves else "")
                     cells.append(f'<a class="cell win {cls}" href="#{w.id}" style="{place} / span {len(w.hours)}" '
                                  f'title="{escape(_window_title(w))}">{star}{_time_range(w.start, w.end)}</a>')
                 continue
@@ -101,11 +105,11 @@ def _grid(f: Forecast) -> str:
 
 
 def _legend() -> str:
-    items = [("fav", "Favored window"), ("ok", "Will-surf window"), ("tent", "Tentative (3+ days out)"),
+    items = [("fav", "Favored window"), ("ok", "Okay to surf"), ("tent", "Tentative (3+ days out)"),
              ("nofit", "Conditions don't fit"), ("busy", "Outside your free hours"), ("dark", "Dark"),
              ("rain", "72 hours after rain")]
     spans = "".join(f'<span><i class="sw {cls}"></i>{label}</span>' for cls, label in items)
-    return f'<div class="legend">{spans}<span>⚠ Big waves</span></div>'
+    return f'<div class="legend">{spans}<span>{WARN_ICON}Big waves</span></div>'
 
 
 def _window_list(windows: list[Window], config: dict[str, Any]) -> str:
@@ -127,13 +131,13 @@ def _window_card(w: Window, config: dict[str, Any]) -> str:
     if w.tentative:
         badge += '<span class="badge tent">Tentative</span>'
     if w.big_waves:
-        badge += '<span class="badge warn">⚠ Big waves</span>'
+        badge += f'<span class="badge warn">{WARN_ICON}Big waves</span>'
     chips = {"fav": '<span class="chip fav">★ Favored</span>', "ok": '<span class="chip ok">Will surf</span>'}
     rows = []
     for factor, text, state in describe_window(w, config):
         chip = chips[state] if factor in ("size", "wind", "tide") else '<span class="chip check">✓</span>'
         if factor == "size" and w.big_waves:
-            chip = '<span class="chip warn">⚠ Big waves</span>'
+            chip = f'<span class="chip warn">{WARN_ICON}Big waves</span>'
         rows.append(f'<div class="row"><dt>{factor.capitalize()}</dt><dd>{escape(text)}</dd>{chip}</div>')
     rows.append(f'<div class="row"><dt>Confidence</dt><dd>{_confidence(w)}</dd></div>')
     cls = ("fav" if w.favored else "ok") + (" tent" if w.tentative else "")
@@ -280,15 +284,17 @@ def _document(spot_name: str, body: str) -> str:
 
 CSS = """
 :root {
-  --fav: #12466F; --ok: #9EC5E8; --tent: #D7E7F5; --text: #10283A; --bg: #F4F5F2;
-  --card: #FFFFFF; --line: #E2E5DF; --muted: #5B6B77; --busy: #E8EAE5; --nofit: #FFFFFF;
+  --fav: #12873F; --ok: #7EE08F; --tent: #CBF3D2; --text: #10283A; --bg: #F4F5F2;
+  --card: #FFFFFF; --line: #E2E5DF; --muted: #5B6B77; --busy: #E8EAE5; --nofit: #F0F2EE;
   --dark-a: #DDE0D9; --dark-b: #EBEDE8; --rain-a: #D3DEE8; --rain-b: #EEF2F6;
+  --fav-text: #0E652F; --ok-chip: #C5F1CD;  /* green text on white and light chips */
+  --warn: #FF7A1A; --warn-bg: #FFE7D6; --warn-line: #FFB681; --warn-text: #853F0E;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 "IBM Plex Sans", system-ui, sans-serif; }
 .mono, code { font-family: "IBM Plex Mono", ui-monospace, monospace; }
 .muted { color: var(--muted); font-size: 12px; }
-a { color: var(--fav); }
+a { color: var(--fav-text); }
 .top { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center;
   padding: 14px max(16px, calc((100% - 960px) / 2)); background: var(--card); border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--fav); }
@@ -310,7 +316,7 @@ main { max-width: 960px; margin: 0 auto; padding: 16px; display: grid; grid-temp
 .gh span { font-size: 10px; color: var(--muted); }
 .gt { grid-column: 1; font-size: 10px; color: var(--muted); align-self: center; text-align: right; padding-right: 4px; }
 .cell { border-radius: 3px; font: 500 10px/1 "IBM Plex Mono", monospace; padding: 5px 6px; overflow: hidden; white-space: nowrap; }
-.cell.nofit { background: var(--nofit); border: 1px solid var(--line); }
+.cell.nofit { background: var(--nofit); }
 .cell.busy { background: var(--busy); }
 .cell.past { background: transparent; border: 1px dashed var(--line); opacity: .6; }
 .cell.dark { background: repeating-linear-gradient(135deg, var(--dark-a) 0 3px, var(--dark-b) 3px 7px); }
@@ -321,14 +327,17 @@ main { max-width: 960px; margin: 0 auto; padding: 16px; display: grid; grid-temp
 .cell.win.tent { border: 1.5px dashed var(--fav); }
 .cell.win.ok.tent { background: var(--tent); }
 .cell.win.fav.tent { border-color: var(--ok); }
-.cell.win:hover, .cell.win:focus-visible { outline: 2px solid #E0703A; outline-offset: 1px; }
+.cell.win:hover, .cell.win:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+.warn-icon { flex: none; vertical-align: -2px; }
+.cell.win .warn-icon { color: var(--warn-text); margin-right: 3px; }
+.cell.win.fav .warn-icon { color: #FFD3B0; }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 14px; font-size: 12px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
 .sw.fav { background: var(--fav); } .sw.ok { background: var(--ok); }
 .sw.tent { background: var(--tent); border: 1px dashed var(--fav); }
-.sw.nofit { background: #fff; border: 1px solid #C9CEC6; } .sw.busy { background: var(--busy); }
+.sw.nofit { background: var(--nofit); } .sw.busy { background: var(--busy); }
 .sw.dark { background: repeating-linear-gradient(135deg, #C9CEC4 0 2px, var(--dark-b) 2px 4px); }
 .sw.rain { background: repeating-linear-gradient(135deg, #B9CADB 0 2px, var(--rain-b) 2px 4px); }
 
@@ -337,15 +346,17 @@ main { max-width: 960px; margin: 0 auto; padding: 16px; display: grid; grid-temp
 .window { border-left: 4px solid var(--ok); scroll-margin-top: 12px; }
 .window.fav { border-left-color: var(--fav); }
 .window.tent { border-style: dashed; border-left-style: solid; }
-.window:target { box-shadow: 0 0 0 2px #E0703A; }
+.window:target { box-shadow: 0 0 0 2px var(--text); }
 .win-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
 .win-head h3 { margin: 0; font-size: 18px; font-weight: 600; }
 .badge, .chip { display: inline-block; border-radius: 999px; font-size: 11px; font-weight: 600; padding: 2px 9px; white-space: nowrap; }
 .badge.fav, .chip.fav { background: var(--fav); color: #fff; }
-.badge.ok, .chip.ok { background: var(--tent); color: var(--fav); }
-.badge.tent { border: 1px dashed var(--fav); color: var(--fav); }
-.badge.warn, .chip.warn { background: #FFF1D6; color: #8A4B00; border: 1px solid #EFC27A; }
-.chip.check { color: var(--fav); background: none; font-size: 13px; }
+.badge.ok, .chip.ok { background: var(--ok-chip); color: var(--fav-text); }
+.badge.tent { border: 1px dashed var(--fav); color: var(--fav-text); }
+.badge.warn, .chip.warn { display: inline-flex; align-items: center; gap: 4px; background: var(--warn-bg); color: var(--warn-text);
+  border: 1px solid var(--warn-line); }
+.legend .warn-icon { color: var(--warn-text); }
+.chip.check { color: var(--fav-text); background: none; font-size: 13px; }
 .factors { margin: 0; }
 .row { display: grid; grid-template-columns: 96px 1fr auto; gap: 4px 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .row dt { color: var(--muted); font-size: 13px; }
@@ -369,10 +380,10 @@ footer a { color: var(--muted); }
 .picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; }
 .pick-count { color: var(--muted); font-size: 13px; }
 .cal .pick-count { margin: 0 0 4px; font-weight: 600; color: var(--text); }
-button.link { background: none; border: 0; padding: 0; font: 600 13px "IBM Plex Sans", sans-serif; color: var(--fav);
+button.link { background: none; border: 0; padding: 0; font: 600 13px "IBM Plex Sans", sans-serif; color: var(--fav-text);
   text-decoration: underline; cursor: pointer; }
 .pick { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
-  color: var(--fav); cursor: pointer; }
+  color: var(--fav-text); cursor: pointer; }
 .pick input { width: 18px; height: 18px; margin: 0; accent-color: var(--fav); cursor: pointer; }
 .window.off, .cell.win.off { opacity: .45; }
 .btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
