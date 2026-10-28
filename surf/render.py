@@ -191,15 +191,24 @@ def _calendar_card(feed_url: str, window_count: int) -> str:
 
 
 def _how_it_works(config: dict[str, Any]) -> str:
-    prefs = config["preferences"]
+    spot, prefs = config["spot"], config["preferences"]
+    daylight, rain = prefs["daylight"], prefs["rain"]
+    warn = " or ".join(surf_range(config["size_buckets"][size][0]) for size in prefs.get("warn_sizes", []))
+    rules = [f'tide below {spot["ideal_tide_ft"]:g} ft is ideal', f'{spot["high_tide_ft"]:g} ft and up is too high']
+    if warn:
+        rules.append(f"{warn} waves get a big-wave warning")
+    spot_rules = ", ".join(rules[:-1]) + (", and " if len(rules) > 2 else " and ") + rules[-1]
     return (
         '<section class="card how"><h2>How it works</h2><ul>'
-        '<li>Every hour of the next 7 days is checked for daylight (from an hour before sunrise to an hour after '
-        f'sunset) and the {prefs["rain"]["skip_after_hours"]}-hour rain rule (stormwater runoff carries bacteria into the surf).</li>'
-        '<li>Wave size, wind and tide are each scored <em>skip</em>, <em>will surf</em> or <em>favored</em> '
-        'against your preferences.</li>'
-        f'<li>Good hours merge into windows of {prefs["min_window_hours"]}+ hours, published here and as a calendar '
-        'feed. The forecast is re-fetched every 30 minutes.</li>'
+        f'<li>Every hour of the next 7 days is checked for daylight (from {_duration(daylight["before_sunrise_min"])} '
+        f'before sunrise to {_duration(daylight["after_sunset_min"])} after sunset) and for rain: hours that follow '
+        f'{rain["threshold_in"]:g}" or more of rain in the past {rain["skip_after_hours"]} hours are skipped, because '
+        'stormwater runoff carries bacteria into the water.</li>'
+        '<li>Wave size (in Surfline-style feet), wind and tide are each rated <em>skip</em>, <em>okay</em> or '
+        f'<em>favored</em> against your preferences. At {escape(spot["name"])}, {spot_rules}.</li>'
+        f'<li>Good hours merge into windows of {prefs["min_window_hours"]}+ hours, shown here and in a calendar feed '
+        'you can subscribe to. The forecast refreshes about every 30 minutes, and calendar apps pick up changes '
+        'every few hours.</li>'
         f'</ul><p><a href="{REPO_URL}">Source on GitHub</a></p></section>'
     )
 
@@ -252,6 +261,15 @@ def _hour_title(sh: ScoredHour) -> str:
     size = size_label(sh.size) if sh.surf_ft is None else surf_range(sh.surf_ft)
     detail = f"{size}, {sh.wind} {sh.hour.wind_speed_mph:.0f} mph, {sh.tide_level} tide"
     return f"{when}: {detail}" + (f" (fails {sh.reason.replace('_', ' ')})" if sh.reason else "")
+
+
+def _duration(minutes: int) -> str:
+    """60 -> an hour, 90 -> 90 minutes."""
+    if minutes == 60:
+        return "an hour"
+    if minutes % 60 == 0:
+        return f"{minutes // 60} hours"
+    return f"{minutes} minutes"
 
 
 def _plural(n: int, word: str) -> str:
