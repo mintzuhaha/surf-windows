@@ -6,10 +6,7 @@
 
 Good surf is a rare alignment: waves from distant storms have to arrive alongside the right tide, wind, daylight and a few rain-free days. Surf Windows finds the hours at Pleasure Point, Santa Cruz, when they all line up, and puts them on your calendar as a live feed that updates with the forecast, so you can plan meetings and dinners around good surf.
 
-<p>
-  <img src="docs/screenshot.png" alt="The week grid and window cards on desktop, with two windows unchecked" width="68%">
-  <img src="docs/screenshot-phone.png" alt="The same page at phone width" width="28%">
-</p>
+![Surf Windows on desktop and phone: the week grid with two windows unchecked, and the window cards with their reasons](docs/hero.png)
 
 ## Why
 
