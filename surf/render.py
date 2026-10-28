@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 REPO_URL = "https://github.com/mintzuhaha/surf-windows"
 GRID_FIRST_HOUR, GRID_LAST_HOUR = 5, 19  # widened if daylight runs past these
 DAYS_SHOWN = 7
-HARD_FILTER_CELLS = {"dark": "dark", "busy": "busy", "rain": "rain"}
+HARD_FILTER_CELLS = {"dark": "dark", "rain": "rain"}
 # Warning triangle for big waves, drawn in currentColor.
 WARN_ICON = ('<svg class="warn-icon" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">'
              '<path d="M12 3.5 2.5 20h19L12 3.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>'
@@ -106,7 +106,7 @@ def _grid(f: Forecast) -> str:
 
 def _legend() -> str:
     items = [("fav", "Favored window"), ("ok", "Okay to surf"), ("tent", "Tentative (3+ days out)"),
-             ("nofit", "Conditions don't fit"), ("busy", "Outside your free hours"), ("dark", "Dark"),
+             ("nofit", "Conditions don't fit"), ("dark", "Dark"),
              ("rain", "72 hours after rain")]
     spans = "".join(f'<span><i class="sw {cls}"></i>{label}</span>' for cls, label in items)
     return f'<div class="legend">{spans}<span>{WARN_ICON}Big waves</span></div>'
@@ -194,8 +194,8 @@ def _how_it_works(config: dict[str, Any]) -> str:
     prefs = config["preferences"]
     return (
         '<section class="card how"><h2>How it works</h2><ul>'
-        '<li>Every hour of the next 7 days is checked for daylight, your free hours and '
-        f'the {prefs["rain"]["skip_after_hours"]}-hour rain rule (stormwater runoff carries bacteria into the surf).</li>'
+        '<li>Every hour of the next 7 days is checked for daylight (from an hour before sunrise to an hour after '
+        f'sunset) and the {prefs["rain"]["skip_after_hours"]}-hour rain rule (stormwater runoff carries bacteria into the surf).</li>'
         '<li>Wave size, wind and tide are each scored <em>skip</em>, <em>will surf</em> or <em>favored</em> '
         'against your preferences.</li>'
         f'<li>Good hours merge into windows of {prefs["min_window_hours"]}+ hours, published here and as a calendar '
@@ -246,7 +246,7 @@ def _window_title(w: Window) -> str:
 
 def _hour_title(sh: ScoredHour) -> str:
     when = format_time(sh.hour.start, minutes=False)
-    reason = {"dark": "dark", "busy": "outside your free hours"}.get(sh.reason or "", "")
+    reason = "dark" if sh.reason == "dark" else ""
     if reason:
         return f"{when}: {reason}"
     size = size_label(sh.size) if sh.surf_ft is None else surf_range(sh.surf_ft)
@@ -285,7 +285,7 @@ def _document(spot_name: str, body: str) -> str:
 CSS = """
 :root {
   --fav: #12873F; --ok: #7EE08F; --tent: #CBF3D2; --text: #10283A; --bg: #F4F5F2;
-  --card: #FFFFFF; --line: #E2E5DF; --muted: #5B6B77; --busy: #E8EAE5; --nofit: #F0F2EE;
+  --card: #FFFFFF; --line: #E2E5DF; --muted: #5B6B77; --nofit: #F0F2EE;
   --dark-a: #DDE0D9; --dark-b: #EBEDE8; --rain-a: #D3DEE8; --rain-b: #EEF2F6;
   --fav-text: #0E652F; --ok-chip: #C5F1CD;  /* green text on white and light chips */
   --warn: #FF7A1A; --warn-bg: #FFE7D6; --warn-line: #FFB681; --warn-text: #853F0E;
@@ -317,7 +317,6 @@ main { max-width: 960px; margin: 0 auto; padding: 16px; display: grid; grid-temp
 .gt { grid-column: 1; font-size: 10px; color: var(--muted); align-self: center; text-align: right; padding-right: 4px; }
 .cell { border-radius: 3px; font: 500 10px/1 "IBM Plex Mono", monospace; padding: 5px 6px; overflow: hidden; white-space: nowrap; }
 .cell.nofit { background: var(--nofit); }
-.cell.busy { background: var(--busy); }
 .cell.past { background: transparent; border: 1px dashed var(--line); opacity: .6; }
 .cell.dark { background: repeating-linear-gradient(135deg, var(--dark-a) 0 3px, var(--dark-b) 3px 7px); }
 .cell.rain { background: repeating-linear-gradient(135deg, var(--rain-a) 0 3px, var(--rain-b) 3px 7px); color: var(--muted); }
@@ -337,7 +336,7 @@ main { max-width: 960px; margin: 0 auto; padding: 16px; display: grid; grid-temp
 .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
 .sw.fav { background: var(--fav); } .sw.ok { background: var(--ok); }
 .sw.tent { background: var(--tent); border: 1px dashed var(--fav); }
-.sw.nofit { background: var(--nofit); } .sw.busy { background: var(--busy); }
+.sw.nofit { background: var(--nofit); }
 .sw.dark { background: repeating-linear-gradient(135deg, #C9CEC4 0 2px, var(--dark-b) 2px 4px); }
 .sw.rain { background: repeating-linear-gradient(135deg, #B9CADB 0 2px, var(--rain-b) 2px 4px); }
 

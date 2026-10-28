@@ -30,7 +30,6 @@ class Hour:
     tide_next_ft: float  # prediction for the next hour, for rising/falling
     tide_day_low_ft: float
     tide_day_high_ft: float
-    dawn: datetime  # civil dawn
     sunrise: datetime
     sunset: datetime
     secondary_swell_height_m: float | None = None
@@ -112,7 +111,6 @@ def normalize(raw: dict[str, dict[str, Any]], config: dict[str, Any], now: datet
                 tide_next_ft=tides[next_local],
                 tide_day_low_ft=low,
                 tide_day_high_ft=high,
-                dawn=day["dawn"],
                 sunrise=day["sunrise"],
                 sunset=day["sunset"],
                 secondary_swell_height_m=_at(marine, "secondary_swell_wave_height", i),

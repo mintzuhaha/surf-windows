@@ -13,7 +13,7 @@ I wanted to plan my work and social life around good surf, without checking fore
 ## How it works
 
 1. **Fetch** swell, wind and rain from Open-Meteo and tide predictions from NOAA. Daylight is computed locally.
-2. **Score each hour.** Hard filters first (daylight, free hours, the 72-hour rain rule), then wave size, wind and tide against preferences that are each *skip*, *will surf* or *favored*.
+2. **Score each hour.** Hard filters first (daylight from an hour before sunrise to an hour after sunset, the 72-hour rain rule), then wave size, wind and tide against preferences that are each *skip*, *will surf* or *favored*.
 3. **Merge** good hours into windows and mark favored and tentative ones.
 4. **Publish** an HTML page and an iCalendar feed. Vercel's CDN caches both for 30 minutes.
 

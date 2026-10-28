@@ -36,7 +36,7 @@ CONFIG: dict[str, Any] = {
         "warn_sizes": ["overhead"],
         "min_window_hours": 2,
         "tentative_after_days": 3,
-        "free_hours": {"weekdays": [[6, 9], [16, 19]], "weekends": [[6, 15]]},
+        "daylight": {"before_sunrise_min": 60, "after_sunset_min": 60},
     },
 }
 
@@ -56,7 +56,7 @@ def make_hour(start: datetime | None = None, **overrides: Any) -> Hour:
         wind_speed_mph=3.0, wind_direction_deg=0.0, wind_gust_mph=5.0,
         rain_prior_in=0.0,
         tide_ft=1.0, tide_next_ft=1.5, tide_day_low_ft=0.0, tide_day_high_ft=6.0,
-        dawn=day.replace(hour=7), sunrise=day.replace(hour=7, minute=25), sunset=day.replace(hour=18, minute=12),
+        sunrise=day.replace(hour=7, minute=25), sunset=day.replace(hour=18, minute=12),
     )
     return replace(hour, **overrides)
 

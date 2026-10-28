@@ -47,6 +47,6 @@ preferences:
   warn_sizes: [overhead]      # sizes shown with a "⚠ Big waves" warning
   min_window_hours: 2
   tentative_after_days: 3
-  free_hours:               # 24-hour clock, [start, end). All day by default; narrow these to your schedule.
-    weekdays: [[0, 24]]
-    weekends: [[0, 24]]
+  daylight:                 # windows may start up to this long before sunrise and end up to this long after sunset
+    before_sunrise_min: 60
+    after_sunset_min: 60

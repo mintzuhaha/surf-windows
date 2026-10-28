@@ -29,17 +29,13 @@ OFFSHORE_HALF_ANGLE_DEG = 60.0
 GLASSY_BELOW_MPH = 5.0
 LIGHT_MAX_MPH = 12.0
 
-# An hour starting this soon before civil dawn still counts as daylight. In autumn
-# dawn lands a minute or two after 7:00, which would otherwise drop the 7am hour.
-DAWN_GRACE = timedelta(minutes=15)
-
 FLAT = "flat"  # surf height below the smallest bucket
 UNKNOWN = "unknown"  # no wave data at all
 
 # Checks in the order they are reported: hard filters first, then factors.
-CHECKS = ("daylight", "free", "rain", "size", "wind", "tide", "tide_direction")
+CHECKS = ("daylight", "rain", "size", "wind", "tide", "tide_direction")
 # Failure reason names where they differ from the check name.
-REASONS = {"daylight": "dark", "free": "busy"}
+REASONS = {"daylight": "dark"}
 
 SIZE_LABELS = {
     FLAT: "flat",
@@ -156,13 +152,11 @@ def tide_direction(tide_ft: float, next_tide_ft: float) -> str:
     return "rising" if next_tide_ft > tide_ft else "falling"
 
 
-def is_daylight(hour: Hour) -> bool:
-    return hour.start + DAWN_GRACE >= hour.dawn and hour.end <= hour.sunset
-
-
-def is_free(start: datetime, free_hours: dict[str, list[list[int]]]) -> bool:
-    slots = free_hours["weekends" if start.weekday() >= 5 else "weekdays"]
-    return any(slot_start <= start.hour and start.hour + 1 <= slot_end for slot_start, slot_end in slots)
+def is_daylight(hour: Hour, daylight: dict[str, int]) -> bool:
+    """The hour starts no earlier than before_sunrise_min before sunrise and ends by after_sunset_min after sunset."""
+    earliest = hour.sunrise - timedelta(minutes=daylight["before_sunrise_min"])
+    latest = hour.sunset + timedelta(minutes=daylight["after_sunset_min"])
+    return hour.start >= earliest and hour.end <= latest
 
 
 def score_hour(hour: Hour, config: dict[str, Any]) -> ScoredHour:
@@ -174,8 +168,7 @@ def score_hour(hour: Hour, config: dict[str, Any]) -> ScoredHour:
     level = tide_level(hour.tide_ft, hour.tide_next_ft, hour.tide_day_low_ft, hour.tide_day_high_ft, spot["high_tide_ft"])
     direction = tide_direction(hour.tide_ft, hour.tide_next_ft)
     states = {
-        "daylight": "ok" if is_daylight(hour) else "skip",
-        "free": "ok" if is_free(hour.start, prefs["free_hours"]) else "skip",
+        "daylight": "ok" if is_daylight(hour, prefs["daylight"]) else "skip",
         "rain": "skip" if hour.rain_prior_in >= prefs["rain"]["threshold_in"] else "ok",
         "size": prefs["size"].get(size, "skip"),
         "wind": prefs["wind"].get(wind, "skip"),

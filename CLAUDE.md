@@ -1,6 +1,6 @@
 # Surf Windows
 
-Puts good surf windows for Pleasure Point (Santa Cruz) on your calendar. Every forecast hour for the coming week is scored against the user's preferences (wave size, tide, wind, rain, daylight, free hours). Good hours are merged into windows and published as a web page plus a calendar feed anyone can subscribe to.
+Puts good surf windows for Pleasure Point (Santa Cruz) on your calendar. Every forecast hour for the coming week is scored against the user's preferences (wave size, tide, wind, rain, daylight). Good hours are merged into windows and published as a web page plus a calendar feed anyone can subscribe to.
 
 ## Today's goal (MVP, due end of day)
 
@@ -52,7 +52,7 @@ DECISIONS.md
 - **Tides:** NOAA CO-OPS station `9413450` (Monterey). The Santa Cruz station `9413745` is a subordinate station with high/low predictions only, so `interval=h` fails there (see DECISIONS.md).
   - `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&station=9413450&datum=MLLW&interval=h&units=english&time_zone=lst_ldt&format=json&begin_date=YYYYMMDD&end_date=YYYYMMDD&application=surf-windows`
   - Request today through today+7 (local dates), so the last forecast hour still has a "next hour" for rising/falling.
-- **Daylight:** compute dawn, sunrise and sunset locally with `astral` for the spot's lat/lon. No API.
+- **Daylight:** compute sunrise and sunset locally with `astral` for the spot's lat/lon. No API.
 - **Attribution (required):** show "Weather data by Open-Meteo.com" and "Tide predictions: NOAA" on the page. Open-Meteo is free for non-commercial use.
 
 ## Scoring rules
@@ -60,8 +60,7 @@ DECISIONS.md
 For each local hour in the next 7 days, starting from the current hour. Hours that already ended today are never scored and never become windows.
 
 1. **Hard filters**, in order. Record the first failure as the hour's reason.
-   - `dark`: the hour must start no earlier than 15 minutes before civil dawn (`DAWN_GRACE` in score.py) and end at or before sunset.
-   - `busy`: the hour must fall inside a free slot for that day (weekday vs weekend lists in config).
+   - `dark`: the hour must start no earlier than `daylight.before_sunrise_min` (60) before sunrise and end no later than `daylight.after_sunset_min` (60) after sunset.
    - `rain`: if total precipitation in the prior `rain.skip_after_hours` hours is >= `rain.threshold_in`, the hour fails.
 2. **Classify** the hour:
    - **Surf height (ft, Surfline's scale)** = `spot.size_factor × sqrt(Σ c²)` over the primary swell, secondary swell and wind waves, where each `c = height_m × 3.281 × (period_s / 10)^0.8`, × 0.8 for swells from 245° or more (west/NW swells wrap into the point and lose size). Fall back to `wave_height` / `wave_period` when no partition is reported. Fitted to Surfline; constants live in score.py, and any refit goes in DECISIONS.md.
@@ -81,7 +80,7 @@ For each local hour in the next 7 days, starting from the current hour. Hours th
 - A window is **favored** when at least half its hours are favored.
 - A window is **tentative** when it starts `tentative_after_days` (3) or more calendar days after today, by local date: `(window_date - today).days >= tentative_after_days`.
 - Stable id: `f"{spot_id}-{YYYYMMDD}-{start_hour:02d}"`.
-- **Near misses:** if there are fewer than 2 windows this week, also return the top 5 daylight + free hours that failed exactly one factor, with that reason (e.g. "Thu 8am: 3–4 ft, but 14 mph onshore"). The page uses these for its empty state.
+- **Near misses:** if there are fewer than 2 windows this week, also return the top 5 daylight hours that failed exactly one factor, with that reason (e.g. "Thu 8am: 3–4 ft, but 14 mph onshore"). The page uses these for its empty state.
 
 ## Calendar feed (`/feed.ics`)
 

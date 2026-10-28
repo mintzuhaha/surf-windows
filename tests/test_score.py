@@ -100,29 +100,20 @@ def test_good_hour_passes_and_is_favored(config):
 
 
 def test_hard_filters_report_in_order(config):
-    # 5am Wednesday: before dawn, outside free hours, and after rain.
+    # 5am Wednesday: over an hour before sunrise, and after rain.
     sh = score_hour(make_hour(start=local(2026, 10, 28, 5), rain_prior_in=0.5), config)
-    assert sh.failures == ("dark", "busy", "rain")
+    assert sh.failures == ("dark", "rain")
     assert sh.reason == "dark"
 
 
-def test_daylight_boundaries_and_dawn_grace(config):
-    at_dawn = make_hour(start=local(2026, 10, 28, 7))
-    assert score_hour(at_dawn, config).passes
-    within_grace = make_hour(start=local(2026, 10, 28, 7), dawn=local(2026, 10, 28, 7, 15))
-    assert score_hour(within_grace, config).passes
-    before_grace = make_hour(start=local(2026, 10, 28, 7), dawn=local(2026, 10, 28, 7, 16))
-    assert score_hour(before_grace, config).reason == "dark"
-    ends_at_sunset = make_hour(start=local(2026, 10, 28, 17), sunset=local(2026, 10, 28, 18))
-    assert "dark" not in score_hour(ends_at_sunset, config).failures
-    ends_after_sunset = make_hour(start=local(2026, 10, 28, 17), sunset=local(2026, 10, 28, 17, 59))
-    assert score_hour(ends_after_sunset, config).reason == "dark"
-
-
-def test_free_hours_weekday_vs_weekend(config):
-    assert score_hour(make_hour(start=local(2026, 10, 28, 9)), config).reason == "busy"  # Wed, slot is [6, 9)
-    assert score_hour(make_hour(start=local(2026, 10, 31, 14)), config).passes  # Sat, slot is [6, 15)
-    assert score_hour(make_hour(start=local(2026, 10, 31, 15)), config).reason == "busy"
+def test_daylight_runs_from_an_hour_before_sunrise_to_an_hour_after_sunset(config):
+    # make_hour: sunrise 7:25am, sunset 6:12pm -> hours may start from 6:25am and end by 7:12pm
+    assert score_hour(make_hour(start=local(2026, 10, 28, 7)), config).passes
+    assert score_hour(make_hour(start=local(2026, 10, 28, 6)), config).reason == "dark"
+    on_the_limit = make_hour(start=local(2026, 10, 28, 6), sunrise=local(2026, 10, 28, 7))
+    assert score_hour(on_the_limit, config).passes
+    assert score_hour(make_hour(start=local(2026, 10, 28, 18)), config).passes  # ends 7pm
+    assert score_hour(make_hour(start=local(2026, 10, 28, 19)), config).reason == "dark"  # ends 8pm
 
 
 def test_rain_threshold_is_inclusive(config):

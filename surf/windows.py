@@ -115,14 +115,14 @@ def describe_window(w: Window, config: dict[str, Any]) -> list[tuple[str, str, s
 def find_near_misses(
     scored: list[ScoredHour], windows: list[Window], config: dict[str, Any]
 ) -> list[NearMiss]:
-    """Daylight, free hours that failed exactly one factor, best first, in time order.
+    """Daylight hours that failed exactly one factor, best first, in time order.
 
     Keeps only the best hour per (day, reason) so one windy morning doesn't
     fill the list.
     """
     if len(windows) >= NEAR_MISSES_BELOW:
         return []
-    candidates = [sh for sh in scored if len(sh.failures) == 1 and sh.reason not in ("dark", "busy")]
+    candidates = [sh for sh in scored if len(sh.failures) == 1 and sh.reason != "dark"]
     candidates.sort(key=lambda sh: (-_fav_count(sh), sh.hour.start))
     picked: dict[tuple[date, str], ScoredHour] = {}
     for sh in candidates:

@@ -32,11 +32,11 @@ def test_failing_hour_splits_and_short_runs_drop(config):
 
 
 def test_does_not_merge_across_midnight(config):
-    config["preferences"]["free_hours"]["weekends"] = [[0, 24]]
-    late = saturday(22, dawn=local(2026, 10, 31, 0), sunset=local(2026, 11, 1, 1))
-    later = saturday(23, dawn=local(2026, 10, 31, 0), sunset=local(2026, 11, 1, 1))
-    sunday = make_hour(start=local(2026, 11, 1, 0), dawn=local(2026, 11, 1, 0), sunset=local(2026, 11, 1, 2))
-    sunday_1am = make_hour(start=local(2026, 11, 1, 1), dawn=local(2026, 11, 1, 0), sunset=local(2026, 11, 1, 2))
+    always_light = {"sunrise": local(2026, 10, 31, 0), "sunset": local(2026, 11, 1, 2)}
+    late = saturday(22, **always_light)
+    later = saturday(23, **always_light)
+    sunday = make_hour(start=local(2026, 11, 1, 0), **always_light)
+    sunday_1am = make_hour(start=local(2026, 11, 1, 1), **always_light)
     windows = find_windows(score_hours([late, later, sunday, sunday_1am], config), config, TODAY)
     assert [len(w.hours) for w in windows] == [2, 2]
 
@@ -66,11 +66,11 @@ def test_no_near_misses_with_two_windows(config):
     assert find_near_misses(scored, windows, config) == []
 
 
-def test_near_misses_fail_exactly_one_factor_in_daylight_and_free_hours(config):
+def test_near_misses_fail_exactly_one_factor_in_daylight(config):
     hours = [
         make_hour(start=local(2026, 10, 29, 8), **windy()),                # one miss: wind
-        make_hour(start=local(2026, 10, 29, 10), **windy()),               # busy (weekday 10am)
-        make_hour(start=local(2026, 10, 29, 6), **windy()),                # dark (before 7am dawn)
+        make_hour(start=local(2026, 10, 29, 10), **windy()),               # same day and reason as 8am: dropped
+        make_hour(start=local(2026, 10, 29, 6), **windy()),                # dark (over an hour before sunrise)
         make_hour(start=local(2026, 10, 29, 17), **windy(tide_ft=5.5)),    # two misses
         make_hour(start=local(2026, 10, 28, 17), swell_height_m=0.25),     # one miss: size
         make_hour(start=local(2026, 10, 28, 7), rain_prior_in=0.4),        # one miss: rain
@@ -85,7 +85,6 @@ def test_near_misses_fail_exactly_one_factor_in_daylight_and_free_hours(config):
 
 
 def test_near_misses_keep_best_hour_per_day_and_reason_and_cap_at_five(config):
-    config["preferences"]["free_hours"]["weekdays"] = [[6, 19]]
     hours = [make_hour(start=local(2026, 10, d, h), **windy()) for d in (27, 28, 29, 30) for h in (8, 9, 10)]
     hours += [make_hour(start=local(2026, 10, d, 8), tide_ft=5.5) for d in (28, 29)]
     scored = score_hours(hours, config)
